@@ -23,8 +23,6 @@ def gen_local_config(
         # Make AgentConfig
         try:
              agents = local_cfg.pop('agents')
-             import pdb
-             pdb.set_trace()
              local_cfg['agent'] = agents[agent_id]
         except IndexError:
             raise IndexError("Agent index out of bound")
