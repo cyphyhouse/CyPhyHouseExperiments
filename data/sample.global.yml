@@ -1,0 +1,51 @@
+leader_pid: 1
+mutex_handler: BaseMutexHandler
+agents:
+    - pid: 1
+      ip: 127.0.0.1
+      port: 2001
+      plist: [2002, 2003]
+      motion_automaton: MoatTestDrone  # TODO how to associate agents to devices with specific moat?
+    - pid: 2
+      ip: 127.0.0.1
+      port: 2002
+      plist: [2001, 2003]
+      motion_automaton: MoatTestDrone  # TODO
+    - pid: 3
+      ip: 127.0.0.1
+      port: 2003
+      plist: [2001]
+      motion_automaton: MoatTestDrone  # TODO
+      
+devices:
+    - bot_name: drone1
+      bot_type: QUAD
+      ros_node_prefix: 'quad_wp_node'
+      queue_size: 1
+      waypoint_topic:
+          topic: 'Waypoint'
+          type: PoseStamped  # geometry_msgs/PoseStamped
+      reached_topic:
+          topic: '/Reached'
+          type: String  # std_msgs/String
+      positioning_topic:
+          topic:  '/vrpn_client_node/'  # TODO '"/vrpn_client_node/" + vicon_obj + "/pose"'
+          type: PoseStamped  # geometry_msgs/PoseStamped
+      planner: SimplePlanner
+      motion_automata: MoatTestDrone  # TODO Can be a list of available Motion Automata
+
+    - bot_name: drone2
+      bot_type: QUAD
+      ros_node_prefix: 'quad_wp_node'
+      queue_size: 1
+      waypoint_topic:
+          topic: 'Waypoint'
+          type: PoseStamped  # geometry_msgs/PoseStamped
+      reached_topic:
+          topic: '/Reached'
+          type: String  # std_msgs/String
+      positioning_topic:
+          topic:  '/vrpn_client_node/'  # TODO '"/vrpn_client_node/" + vicon_obj + "/pose"'
+          type: PoseStamped  # geometry_msgs/PoseStamped
+      planner: SimplePlanner
+      motion_automata: MoatTestDrone  # TODO Can be a list of available Motion Automata
