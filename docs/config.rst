@@ -30,11 +30,4 @@ Note that agent and device indices start from 0, and they are different from
     Include usage of `gen_local_config` script to generate a local config from
     the global config
 
-.. todo::
-
-    We could simply the options for configuration files and generate necessary
-    objects after parsing.
-
-    + ``plist`` can be as simple as a list of pids of other agents.
-
 
