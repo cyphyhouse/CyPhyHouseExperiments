@@ -1,9 +1,9 @@
-from unittest import TestCase
+import unittest
 
-from . import gen_local_config
+from config_gen import gen_local_config
 
 
-class TestGenLocalConfig(TestCase):
+class TestGenLocalConfig(unittest.TestCase):
     def setUp(self) -> None:
         pass
 
