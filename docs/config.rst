@@ -17,9 +17,8 @@ Example global configuration file
 Auto-generated Agent Local Configurations
 -----------------------------------------
 
-Example local configuration file by assigning agent 1 to device 1.
-Note that agent and device indices start from 0, and they are different from
-``pid``.
+Example local configuration file for the device with ip ``127.0.0.1``
+and port ``2001``.
 
 .. literalinclude:: ../data/sample.local.yml
     :language: yaml
