@@ -26,3 +26,4 @@ device:
     type: PoseStamped
 leader_pid: 1
 mutex_handler: BaseMutexHandler
+num_agents: 3
