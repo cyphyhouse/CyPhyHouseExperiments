@@ -25,6 +25,7 @@ def gen_all_local_configs(cfg: Dict[str, Any]) \
         bot_name = agent['on_device']
         assert bot_name in device_map
         local_cfg = cfg.copy()
+        local_cfg['num_agents'] = len(cfg['agents'])
         del local_cfg['agents']
         local_cfg['agent'] = agent
         del local_cfg['devices']
