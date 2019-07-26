@@ -1,6 +1,6 @@
 import unittest
 
-from config_gen import gen_local_config
+from cph import konfig
 
 
 class TestGenLocalConfig(unittest.TestCase):
@@ -10,12 +10,12 @@ class TestGenLocalConfig(unittest.TestCase):
     def test_validate_global_config_empty(self):
         # TODO
         cfg = {}
-        self.assertTrue(gen_local_config.validate_global_config(cfg))
+        self.assertTrue(konfig.validate_global_config(cfg))
 
     def test_validate_global_config_missing(self):
         # TODO
         cfg = {}
-        self.assertFalse(gen_local_config.validate_global_config(cfg))
+        self.assertFalse(konfig.validate_global_config(cfg))
 
     def test_gen_local_config(self):
         # TODO
