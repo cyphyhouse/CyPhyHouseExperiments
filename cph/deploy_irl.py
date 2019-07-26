@@ -46,7 +46,6 @@ def get_device_list() -> List[DeviceInfo]:
 def upload_and_exec(device_addr: IPv4Address,
                     local_path: str,  # TODO use Path instead of str?
                     remote_path: str,
-                    command: str = None,
                     username: str = None,
                     password: str = None,
                     ) -> None:
@@ -69,6 +68,7 @@ def upload_and_exec(device_addr: IPv4Address,
     sftp_client.put(local_path, remote_path)
     sftp_client.close()
 
+    command = ' '.join(["bash", remote_path])
     print("[INFO] Sending command \"" + command + "\" to ", device_addr)  # TODO logging instead of printing
     stdin, stdout, stderr = ssh_client.exec_command(command)
 

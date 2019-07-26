@@ -33,8 +33,7 @@ def main(argv) -> None:
                 username='pi',   # TODO: read username and password from somewhere
                 password='cyphyhouse',
                 local_path="./flydrone.bash",
-                remote_path="./flydrone.bash",
-                command="bash ./flydrone.bash")
+                remote_path="./flydrone.bash")
 
 
 if __name__ == "__main__":
