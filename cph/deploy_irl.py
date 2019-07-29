@@ -23,22 +23,22 @@ def get_device_list() -> List[DeviceInfo]:
     """
     buffer_size = 1024
     client_port = 60651
-    sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-    sender.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    sender.sendto(b'INFO', ('<broadcast>', client_port))
-    print("[INFO] Device query sent!")  # TODO logging instead of printing
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) as sender:
+        sender.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sender.sendto(b'INFO', ('<broadcast>', client_port))
+        print("[INFO] Device query sent!")  # TODO logging instead of printing
 
-    sender.settimeout(3.0)  # Set timeout to avoid waiting forever
-    device_list = []
-    while True:
-        try:
-            info, address = sender.recvfrom(buffer_size)
-            info = info.decode("utf-8").split(' ')
-            device_info = DeviceInfo(name=info[0], addr=address[0], status=info[1])
-            device_list.append(device_info)
-            print(info[0], " from ", address)
-        except socket.timeout:
-            break
+        sender.settimeout(3.0)  # Set timeout to avoid waiting forever
+        device_list = []
+        while True:
+            try:
+                info, address = sender.recvfrom(buffer_size)
+                info = info.decode("utf-8").split(' ')
+                device_info = DeviceInfo(name=info[0], addr=address[0], status=info[1])
+                device_list.append(device_info)
+                print(info[0], " from ", address)
+            except socket.timeout:
+                break
     print("[INFO] Discover finished")  # TODO logging instead of printing
     return device_list
 
@@ -60,6 +60,7 @@ def upload_and_exec(device_addr: IPv4Address,
     :return:
     """
     ssh_client = paramiko.SSHClient()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh_client.connect(hostname=str(device_addr),
                        username=username, password=password)
 
