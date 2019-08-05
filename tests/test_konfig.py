@@ -31,10 +31,10 @@ devices:
       ros_node_prefix: 'quad_wp_node'
       queue_size: 1
       waypoint_topic:
-          topic: 'Waypoint'
+          topic: 'waypoint'
           type: PoseStamped  # geometry_msgs/PoseStamped
       reached_topic:
-          topic: '/Reached'
+          topic: 'reached'
           type: String  # std_msgs/String
       positioning_topic:
           topic:  '/vrpn_client_node/'  # TODO '"/vrpn_client_node/" + vicon_obj + "/pose"'
