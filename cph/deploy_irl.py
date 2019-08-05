@@ -3,7 +3,7 @@
 from ipaddress import IPv4Address
 import paramiko
 import socket
-from typing import List, NamedTuple
+from typing import Dict, NamedTuple
 
 
 DeviceInfo = NamedTuple(
@@ -16,7 +16,7 @@ DeviceInfo = NamedTuple(
 )
 
 
-def get_device_list() -> List[DeviceInfo]:
+def get_device_map() -> Dict[str, DeviceInfo]:
     """
     The function broadcasts to LAN and wait for responses from devices to compile a list.
     :return: The list of discovered devices
@@ -29,18 +29,18 @@ def get_device_list() -> List[DeviceInfo]:
         print("[INFO] Device query sent!")  # TODO logging instead of printing
 
         sender.settimeout(3.0)  # Set timeout to avoid waiting forever
-        device_list = []
+        device_map = {}
         while True:
             try:
                 info, address = sender.recvfrom(buffer_size)
                 info = info.decode("utf-8").split(' ')
                 device_info = DeviceInfo(name=info[0], addr=address[0], status=info[1])
-                device_list.append(device_info)
-                print(info[0], " from ", address)
+                device_map[device_info.name] = device_info
+                print("[INFO]", info[0], " from ", address)
             except socket.timeout:
                 break
     print("[INFO] Discover finished")  # TODO logging instead of printing
-    return device_list
+    return device_map
 
 
 def upload_and_exec(device_addr: IPv4Address,
