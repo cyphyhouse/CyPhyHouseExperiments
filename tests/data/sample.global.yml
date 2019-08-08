@@ -19,7 +19,7 @@ devices:
       bot_type: CAR
       ip: 127.0.0.1
       port: 2003
-      ros_node_prefix: 'car_wp_node'
+      ros_node_prefix: 'waypoint_node'
       queue_size: 1
       waypoint_topic:
           topic: 'waypoint'
@@ -37,7 +37,7 @@ devices:
       bot_type: CAR
       ip: 127.0.0.1
       port: 2004
-      ros_node_prefix: 'car_wp_node'
+      ros_node_prefix: 'waypoint_node'
       queue_size: 1
       waypoint_topic:
           topic: 'waypoint'
@@ -55,7 +55,7 @@ devices:
       bot_type: QUAD
       ip: 127.0.0.1
       port: 2001
-      ros_node_prefix: 'quad_wp_node'
+      ros_node_prefix: 'waypoint_node'
       queue_size: 1
       waypoint_topic:
           topic: 'waypoint'
@@ -73,7 +73,7 @@ devices:
       bot_type: QUAD
       ip: 127.0.0.1
       port: 2002
-      ros_node_prefix: 'quad_wp_node'
+      ros_node_prefix: 'waypoint_node'
       queue_size: 1
       waypoint_topic:
           topic: 'waypoint'
