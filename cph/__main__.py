@@ -1,47 +1,72 @@
 """Main entry point for deployment or simulation"""
 
-import base64
-from typing import Any, Dict
-import yaml
+import tempfile
 
 from .konfig import Konfig
-from . import deploy_irl
 
 
-def dump_start_script(app_py_path: str,
-                      local_cfg: Dict[str, Any],
-                      script_path: str) -> None:
-    """
-    Dump the start script with generated Python code and config files encoded with base64 strings and decoded
-    :param app_py_path: Path to Koord compiled code
-    :param local_cfg: Agent specific local config generated from global config
-    :param script_path: Path where the script file will be dumped
-    :return: None
-    """
-    # FIXME This is a temporary solution for sending files.
-    #  There may be a limit on how long the encoded string can be.
-    tmp_app_name = b"/tmp/app.py"  # FIXME Decide where to put temporary files
-    tmp_cfg_name = b"/tmp/local.yml"
+def deploy_main(app_py: str, conf: Konfig) -> None:
+    from . import deploy_irl
 
-    with open(app_py_path, 'rb') as in_file:
-        b64_app_py = base64.b64encode(in_file.read())
+    device_map = deploy_irl.get_device_map()
+    print("Discovered devices:\n" + '\n'.join([str(d) for d in device_map]))  # TODO Logging
 
-    local_yml = yaml.dump(local_cfg, encoding='utf-8', default_flow_style=True)
-    b64_local_yml = base64.b64encode(local_yml)
+    # TODO Use device list to generate/update global config file
 
-    with open(script_path, 'wb', encoding='utf8') as out_file:
-        out_file.write(b"echo " + b64_app_py + b" | base64 --decode > "
-                       + tmp_app_name + b"\n")
-        out_file.write(b"echo " + b64_local_yml + b" | base64 --decode > "
-                       + tmp_cfg_name + b"\n")
-        # TODO Bash commands for launching ROS
+    for local_cfg in conf.gen_all_local_configs():
+        device = local_cfg['device']
+        if device['bot_name'] not in device_map:
+            print("[WARNING] Device \"" + device['bot_name'] + "\" is not available. " +
+                  "Agents on this device are not deployed.")
+            continue
 
-        out_file.write(b"sleep 10s\n")  # FIXME Wait for ROS/hardware to initialize
+        # FIXME Use library to handle filesystem paths
+        start_bash_path = "start_" + device['bot_name'] + ".bash"
 
-        cmd_list = [b"python3", b"-m", b"src.scripts.run",
-                    b"--app", tmp_app_name,
-                    b"--config", tmp_cfg_name]
-        out_file.write(b" ".join(cmd_list))
+        deploy_irl.dump_start_script(app_py, local_cfg, start_bash_path)
+        deploy_irl.upload_and_exec(
+            device_addr=device['ip'],
+            username=device['username'],
+            password=device['password'],
+            local_path=start_bash_path,
+            remote_path=start_bash_path)
+
+    # TODO Wait until shutdown?
+    pass
+
+
+def simulate_main(app_py: str, conf: Konfig) -> None:
+    import yaml
+
+    from cym_gazebo import create_roslaunch_instance, DeviceInitInfo
+    from geometry_msgs.msg import Point
+    import src.scripts.run as middleware
+
+    device_info_list = []
+    for local_cfg in conf.gen_all_local_configs():
+        agent = local_cfg['agent']
+        device = local_cfg['device']
+        device_info_list.append(
+            DeviceInitInfo(
+                device['bot_name'],
+                device['bot_type'],
+                Point(agent['pid'], 1, 0.3)
+            )
+        )
+
+    launch_gazebo = create_roslaunch_instance(device_info_list)
+    try:
+        launch_gazebo.start()
+
+        for local_cfg in conf.gen_all_local_configs():
+            # TODO Avoid creating temporary file and directly pass configs to middleware
+            with tempfile.NamedTemporaryFile(mode='w') as local_cfg_file:
+                yaml.dump(local_cfg, local_cfg_file, default_flow_style=True)
+            #   middleware.run_app(app_py, local_cfg_file.name)  # FIXME avoid importing app_py multiple times
+
+        launch_gazebo.spin()
+    finally:
+        launch_gazebo.stop()
 
 
 def main(argv) -> None:
@@ -56,31 +81,10 @@ def main(argv) -> None:
         conf = Konfig(f)
 
     # TODO Run simulation or deployment scripts
-    if True:
-        device_map = deploy_irl.get_device_map()
-
-        print("Discovered devices:\n" + '\n'.join([str(d) for d in device_map]))  # TODO Logging
-
-        # TODO Use device list to generate/update global config file
-
-        for local_cfg in conf.gen_all_local_configs():
-            device = local_cfg['device']
-
-            if device['bot_name'] not in device_map:
-                print("[WARNING] Device \"" + device['bot_name'] + "\" is not available. " + \
-                      "Agents on this device are not deployed.")
-                continue
-
-            # FIXME Use library to handle filesystem paths
-            start_bash_path = "start_" + device['bot_name'] + ".bash"
-            dump_start_script(app_py, local_cfg, start_bash_path)
-
-            deploy_irl.upload_and_exec(
-                device_addr=device['ip'],
-                username=device['username'],
-                password=device['password'],
-                local_path=start_bash_path,
-                remote_path=start_bash_path)
+    if False:
+        deploy_main(app_py, conf)
+    else:  # Do simulation
+        simulate_main(app_py, conf)
 
 
 if __name__ == "__main__":
