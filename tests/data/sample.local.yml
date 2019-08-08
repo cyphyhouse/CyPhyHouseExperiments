@@ -13,7 +13,7 @@ device:
   positioning_topic: {topic: /vrpn_client_node/, type: PoseStamped}
   queue_size: 1
   reached_topic: {topic: reached, type: String}
-  ros_node_prefix: quad_wp_node
+  ros_node_prefix: waypoint_node
   waypoint_topic: {topic: waypoint, type: PoseStamped}
 leader_pid: 1
 mutex_handler: BaseMutexHandler
