@@ -1,7 +1,5 @@
 """Main entry point for deployment or simulation"""
 
-import tempfile
-
 from .konfig import Konfig
 
 
@@ -36,6 +34,7 @@ def deploy_main(app_py: str, conf: Konfig) -> None:
 
 
 def simulate_main(app_py: str, conf: Konfig) -> None:
+    import multiprocessing as mp
     import yaml
 
     from cym_gazebo import create_roslaunch_instance, DeviceInitInfo
@@ -43,7 +42,10 @@ def simulate_main(app_py: str, conf: Konfig) -> None:
     import rospy
     import src.scripts.run as middleware
 
+    mp.set_start_method('spawn')
+
     device_info_list = []
+    agent_proc_list = []
     for local_cfg in conf.gen_all_local_configs():
         agent = local_cfg['agent']
         device = local_cfg['device']
@@ -54,36 +56,29 @@ def simulate_main(app_py: str, conf: Konfig) -> None:
                 Point(agent['pid'], agent['pid'], 0.3)  # FIXME Set initial location
             )
         )
+        # Generate a process object for each Agent
+        device['ros_node_prefix'] = \
+            device['bot_name'] + '/waypoint_node'  # FIXME Handle topic names uniformly
+        proc = mp.Process(target=middleware.run_app, args=(app_py, local_cfg))
+        agent_proc_list.append(proc)
 
     launch_gazebo = create_roslaunch_instance(device_info_list)
-    agent_thread_list = []
     try:
         launch_gazebo.start()
 
         rospy.sleep(8.0)  # FIXME wait for launch_gazebo finish starting
-
-        for local_cfg in conf.gen_all_local_configs():
-            agent = local_cfg['agent']
-            local_cfg['device']['ros_node_prefix'] = \
-                local_cfg['device']['bot_name'] + '/waypoint_node'  # FIXME Handle topic names uniformly
-            # FIXME Avoid creating temporary file and directly pass configs to middleware
-            with tempfile.NamedTemporaryFile(mode='w') as local_cfg_file:
-                yaml.dump(local_cfg, local_cfg_file, default_flow_style=True)
-                print("Instantiating agent", agent['pid'])
-                th = middleware.run_app(app_py, local_cfg_file.name)
-                agent_thread_list.append(th)
+        for agent in agent_proc_list:
+            agent.start()
 
         launch_gazebo.spin()
     except KeyboardInterrupt:
-        print("User sent SIGINT. Sending stop event to all agent threads...")
+        print("User sent SIGINT. Sending SIGTERM to all agent processes...")
     finally:
-        for th in agent_thread_list:
-            if th.is_alive():
-                th.stop()
+        for agent in agent_proc_list:
+            if agent.is_alive():
+                agent.terminate()
+                agent.join()  # Wait for the agent to finish
         launch_gazebo.stop()
-        # Wait for all agent threads to finish
-        for th in agent_thread_list:
-            th.join()
 
 
 def main(argv) -> None:
