@@ -40,6 +40,7 @@ def simulate_main(app_py: str, conf: Konfig) -> None:
 
     from cym_gazebo import create_roslaunch_instance, DeviceInitInfo
     from geometry_msgs.msg import Point
+    import rospy
     import src.scripts.run as middleware
 
     device_info_list = []
@@ -50,23 +51,39 @@ def simulate_main(app_py: str, conf: Konfig) -> None:
             DeviceInitInfo(
                 device['bot_name'],
                 device['bot_type'],
-                Point(agent['pid'], 1, 0.3)
+                Point(agent['pid'], agent['pid'], 0.3)  # FIXME Set initial location
             )
         )
 
     launch_gazebo = create_roslaunch_instance(device_info_list)
+    agent_thread_list = []
     try:
         launch_gazebo.start()
 
+        rospy.sleep(5.0)  # FIXME wait for launch_gazebo finish starting
+
         for local_cfg in conf.gen_all_local_configs():
-            # TODO Avoid creating temporary file and directly pass configs to middleware
+            agent = local_cfg['agent']
+            local_cfg['device']['ros_node_prefix'] = \
+                local_cfg['device']['bot_name'] + '/waypoint_node'  # FIXME Handle topic names uniformly
+            # FIXME Avoid creating temporary file and directly pass configs to middleware
             with tempfile.NamedTemporaryFile(mode='w') as local_cfg_file:
                 yaml.dump(local_cfg, local_cfg_file, default_flow_style=True)
-            #   middleware.run_app(app_py, local_cfg_file.name)  # FIXME avoid importing app_py multiple times
+                print("Instantiating agent", agent['pid'])
+                th = middleware.run_app(app_py, local_cfg_file.name)
+                agent_thread_list.append(th)
 
         launch_gazebo.spin()
+    except KeyboardInterrupt:
+        print("Sending stop event to all agent threads...")
+        for th in agent_thread_list:
+            if th.is_alive():
+                th.stop()
     finally:
         launch_gazebo.stop()
+        # Wait for all agent threads to finish
+        for th in agent_thread_list:
+            th.join()
 
 
 def main(argv) -> None:
