@@ -60,7 +60,7 @@ def simulate_main(app_py: str, conf: Konfig) -> None:
     try:
         launch_gazebo.start()
 
-        rospy.sleep(5.0)  # FIXME wait for launch_gazebo finish starting
+        rospy.sleep(8.0)  # FIXME wait for launch_gazebo finish starting
 
         for local_cfg in conf.gen_all_local_configs():
             agent = local_cfg['agent']
@@ -75,11 +75,11 @@ def simulate_main(app_py: str, conf: Konfig) -> None:
 
         launch_gazebo.spin()
     except KeyboardInterrupt:
-        print("Sending stop event to all agent threads...")
+        print("User sent SIGINT. Sending stop event to all agent threads...")
+    finally:
         for th in agent_thread_list:
             if th.is_alive():
                 th.stop()
-    finally:
         launch_gazebo.stop()
         # Wait for all agent threads to finish
         for th in agent_thread_list:
