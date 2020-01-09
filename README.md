@@ -4,10 +4,10 @@ CyPhyHouse-Dev
 [![License](https://img.shields.io/github/license/cyphyhouse/CyPhyHouse-Dev)](LICENSE)
 
 CyPhyHouse-Dev repository is for the glue code that integrates all components
-in the [CyPhyHouse](url-cph) project.
+in the [CyPhyHouse][url-cph] project.
 This repository also contains executable scripts for reproducing experiment
-results in [Intelligent Robotics Lab](url-irl) in UIUC as well as in our Gazebo
-based simulation engine, [Cymulator](url-cym).
+results in [Intelligent Robotics Lab][url-irl] in UIUC as well as in our Gazebo
+based simulation engine, [Cymulator][url-cym].
 
 [url-cph]: https://cyphyhouse.github.io/
 [url-irl]: https://robotics.illinois.edu/robotics-facilities/
