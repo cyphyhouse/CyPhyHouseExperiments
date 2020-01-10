@@ -1,13 +1,14 @@
-CyPhyHouse-Dev
-==============
+CyPhyHouseExperiments
+=====================
 
-[![License](https://img.shields.io/github/license/cyphyhouse/CyPhyHouse-Dev)](LICENSE)
+[![License](https://img.shields.io/github/license/cyphyhouse/CyPhyHouseExperiments)](LICENSE)
 
-CyPhyHouse-Dev repository is for the glue code that integrates all components
-in the [CyPhyHouse][url-cph] project.
-This repository also contains executable scripts for reproducing experiment
-results in [Intelligent Robotics Lab][url-irl] in UIUC as well as in our Gazebo
-based simulation engine, [Cymulator][url-cym].
+CyPhyHouseExperiments repository is for executable scripts for reproducing
+experiment results in our research papers.
+These scripts can be used in [Intelligent Robotics Lab][url-irl] in UIUC as well
+as in our Gazebo based simulation engine, [Cymulator][url-cym].
+This repository also contains the glue code that integrates all components in
+the [CyPhyHouse][url-cph] project.
 
 [url-cph]: https://cyphyhouse.github.io/
 [url-irl]: https://robotics.illinois.edu/robotics-facilities/
@@ -17,8 +18,8 @@ based simulation engine, [Cymulator][url-cym].
 Website and Documentation
 -------------------------
 
-CyPhyHouse-Dev is part of the CyPhyHouse project and currently requires setting
-up hardware devices and installing software on each device.
+CyPhyHouseExperiments is part of the CyPhyHouse project and currently requires
+setting up hardware devices and installing software on each device.
 Please visit following websites for detail usages.
 
 Broad overview of CyPhyHouse project is available at:
@@ -33,6 +34,6 @@ Or you can find the documentation at:
 License
 -------
 
-CyPhyHouse-Dev is licensed under the terms of the NCSA License (see the file
+CyPhyHouseExperiments is licensed under the terms of the NCSA License (see the file
 [LICENSE](LICENSE)).
 
