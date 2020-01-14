@@ -1,0 +1,19 @@
+allwrite:
+  int sum = 0
+  int numadded = 0
+local:
+  boolean added = false
+  int finalsum
+
+adding:
+  pre: !added
+  eff :
+      atomic:
+         sum = sum + pid * 2
+         numadded = numadded + 1
+         added = true
+finalsum:
+  pre: numadded == numAgents
+  eff :
+      finalsum = sum
+      stop

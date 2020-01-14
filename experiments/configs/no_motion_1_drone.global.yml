@@ -1,0 +1,12 @@
+leader_pid: 1
+mutex_handler: BaseMutexHandler
+agents:
+    - pid: 1
+      plist: [2001]
+      on_device: drone1
+
+devices:
+    drone1:
+      bot_type: QUAD
+      ip: 127.255.255.255
+      port: 2001
