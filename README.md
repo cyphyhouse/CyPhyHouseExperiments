@@ -37,3 +37,20 @@ License
 CyPhyHouseExperiments is licensed under the terms of the NCSA License (see the file
 [LICENSE](LICENSE)).
 
+
+Run experiment scripts
+======================
+
+Assume the Koord compiler and middle-ware are already installed.
+
+Usage
+-----
+
+Change the working directory to `experiments`.
+Run the following command to execute, for example, `addnums` with 1 simulated
+agent.
+
+```bash
+$ ./experiment.sh apps/addnum.koord configs/no_motion_1_drone.global.yml
+```
+
