@@ -1,0 +1,27 @@
+allwrite:
+  int candidate = -1
+
+local:
+  boolean voted = false
+  int i = 0
+  int leader
+
+voted:
+  pre: !voted
+  eff:
+      atomic:
+        if candidate < pid:
+            candidate = pid
+        else:
+            leader = candidate
+        voted = true
+
+finalsum:
+  pre: voted
+  eff:
+    if i < numAgents:
+        i = i + 1
+        leader = candidate
+    else:
+        stdout << "Agent " << pid << ": leader = " << leader << "\n"
+        stop

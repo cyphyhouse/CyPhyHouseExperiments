@@ -1,3 +1,9 @@
+using Log:
+  sensors:
+    stream stdin
+  actuators:
+    stream stdout
+
 allwrite:
   int sum = 0
   int numadded = 0
@@ -16,4 +22,5 @@ finalsum:
   pre: numadded == numAgents
   eff :
       finalsum = sum
+      stdout << "Agent " << pid << ": finalsum = " << finalsum << "\n"
       stop
