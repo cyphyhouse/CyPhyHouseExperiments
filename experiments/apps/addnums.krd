@@ -23,4 +23,5 @@ finalsum:
   eff :
       finalsum = sum
       stdout << "Agent " << pid << ": finalsum = " << finalsum << "\n"
-      stop
+      trystop()
+

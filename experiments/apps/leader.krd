@@ -24,4 +24,5 @@ finalsum:
         leader = candidate
     else:
         stdout << "Agent " << pid << ": leader = " << leader << "\n"
-        stop
+        trystop()
+

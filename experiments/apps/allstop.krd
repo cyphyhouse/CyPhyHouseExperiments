@@ -1,0 +1,27 @@
+allread:
+    boolean[] stopped
+
+local:
+    int i = 0
+
+init:
+    stopped[pid] = false
+
+update:
+    pre: !any(stopped)
+    eff:
+        if i < 10:
+            i = i + 1
+        else:
+            stopped[pid] = true
+
+anystop:
+    pre: any(stopped) && !stopped[pid]
+    eff:
+        stopped[pid] = true
+
+allstop:
+    pre: all(stopped)
+    eff:
+        trystop()
+
