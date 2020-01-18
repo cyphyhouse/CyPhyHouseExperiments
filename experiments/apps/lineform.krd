@@ -1,0 +1,19 @@
+using Motion:
+  sensors:
+    pos position
+  actuators:
+    pos target
+
+allread:
+  pos[] mypos
+
+init:
+   mypos[pid] = Motion.position
+
+update:
+   pre:(true)
+   eff:
+      mypos[pid] = Motion.position
+      if (pid != 0 and pid != numAgents - 1):
+        Motion.target = midpoint(mypos[pid+1], mypos[pid-1])
+
