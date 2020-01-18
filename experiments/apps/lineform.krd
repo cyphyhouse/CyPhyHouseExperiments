@@ -7,13 +7,21 @@ using Motion:
 allread:
   pos[] mypos
 
+local:
+   int i = 0
+
 init:
    mypos[pid] = Motion.position
 
 update:
-   pre:(true)
+   pre: (i < 100)
    eff:
+      i = i + 1
       mypos[pid] = Motion.position
       if (pid != 0 and pid != numAgents - 1):
         Motion.target = midpoint(mypos[pid+1], mypos[pid-1])
 
+end:
+   pre: true
+   eff:
+      trystop()
