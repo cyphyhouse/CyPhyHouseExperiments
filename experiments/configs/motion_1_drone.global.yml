@@ -4,7 +4,7 @@ agents:
     - pid: 0
       plist: [2000]  # TODO use pid instead to refer to other agents
       on_device: drone0
-      motion_automaton: MoatTestDrone
+      motion_automaton: MoatHectorQuadrotor
 devices:
     drone0:
       bot_type: QUAD
@@ -22,5 +22,5 @@ devices:
           topic:  '/vrpn_client_node/'  # TODO '"/vrpn_client_node/" + vicon_obj + "/pose"'
           type: PoseStamped  # geometry_msgs/PoseStamped
       planner: SimplePlanner
-      motion_automata: [MoatTestDrone]
+      motion_automata: [MoatTestDrone, MoatHectorQuadrotor]
 

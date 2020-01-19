@@ -4,23 +4,23 @@ agents:
     - pid: 0
       plist: [2000, 2001, 2002, 2003, 2004]
       on_device: drone0
-      motion_automaton: MoatTestDrone
+      motion_automaton: MoatHectorQuadrotor
     - pid: 1
       plist: [2000, 2001, 2002, 2003, 2004]
       on_device: drone1
-      motion_automaton: MoatTestDrone
+      motion_automaton: MoatHectorQuadrotor
     - pid: 2
       plist: [2000, 2001, 2002, 2003, 2004]
       on_device: drone2
-      motion_automaton: MoatTestDrone
+      motion_automaton: MoatHectorQuadrotor
     - pid: 3
       plist: [2000, 2001, 2002, 2003, 2004]
       on_device: drone3
-      motion_automaton: MoatTestDrone
+      motion_automaton: MoatHectorQuadrotor
     - pid: 4
       plist: [2000, 2001, 2002, 2003, 2004]
       on_device: drone4
-      motion_automaton: MoatTestDrone
+      motion_automaton: MoatHectorQuadrotor
 devices:
     drone0:
       bot_type: QUAD
@@ -38,7 +38,7 @@ devices:
           topic:  '/vrpn_client_node/'  # TODO '"/vrpn_client_node/" + vicon_obj + "/pose"'
           type: PoseStamped  # geometry_msgs/PoseStamped
       planner: SimplePlanner
-      motion_automata: [MoatTestDrone]
+      motion_automata: [MoatTestDrone, MoatHectorQuadrotor]
     drone1:
       bot_type: QUAD
       ip: 127.255.255.255
@@ -55,7 +55,7 @@ devices:
           topic:  '/vrpn_client_node/'
           type: PoseStamped  # geometry_msgs/PoseStamped
       planner: SimplePlanner
-      motion_automata: [MoatTestDrone]
+      motion_automata: [MoatTestDrone, MoatHectorQuadrotor]
     drone2:
       bot_type: QUAD
       ip: 127.255.255.255
@@ -72,7 +72,7 @@ devices:
           topic:  '/vrpn_client_node/'
           type: PoseStamped  # geometry_msgs/PoseStamped
       planner: SimplePlanner
-      motion_automata: [MoatTestDrone]
+      motion_automata: [MoatTestDrone, MoatHectorQuadrotor]
     drone3:
       bot_type: QUAD
       ip: 127.255.255.255
@@ -89,7 +89,7 @@ devices:
           topic:  '/vrpn_client_node/'
           type: PoseStamped  # geometry_msgs/PoseStamped
       planner: SimplePlanner
-      motion_automata: [MoatTestDrone]
+      motion_automata: [MoatTestDrone, MoatHectorQuadrotor]
     drone4:
       bot_type: QUAD
       ip: 127.255.255.255
@@ -106,4 +106,4 @@ devices:
           topic:  '/vrpn_client_node/'
           type: PoseStamped  # geometry_msgs/PoseStamped
       planner: SimplePlanner
-      motion_automata: [MoatTestDrone]
+      motion_automata: [MoatTestDrone, MoatHectorQuadrotor]
