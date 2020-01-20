@@ -1,0 +1,19 @@
+using Motion:
+    actuators:
+        pos[] path
+    sensors:
+        boolean reached
+
+local:
+    int tries = 1
+
+event:
+    pre: tries == 1
+    eff:
+        tries = 2
+        Motion.path = toList(pos3d(-2*pid, 2*pid, 1.0), pos3d(2*pid, 2*pid, 1.0))
+
+end:
+    pre: tries == 2 && Motion.reached
+    eff:
+        trystop()
