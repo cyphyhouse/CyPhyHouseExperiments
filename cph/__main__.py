@@ -34,6 +34,34 @@ def deploy_main(app_py: str, conf: Konfig) -> None:
 
 
 def simulate_main(app_py: str, conf: Konfig) -> None:
+    from socketserver import DatagramRequestHandler, ThreadingUDPServer
+    from threading import Thread
+
+    class SimUDPBCastHandler(DatagramRequestHandler):
+        def handle(self):
+            data = self.request[0].strip()
+            socket = self.request[1]
+            for addr in conf.gen_all_agent_addrs():
+                socket.sendto(data, addr)
+
+    server = ThreadingUDPServer(conf.udp_bcast_addr, SimUDPBCastHandler)
+    server_thread = Thread(target=server.serve_forever)
+    try:
+        server_thread.daemon = True
+        server_thread.start()  # Start server before all other agent processes
+
+        simulate_agents(app_py, conf)
+    finally:
+        server.shutdown()
+        print("Shuting down simulated broadcast server thread...")
+        server_thread.join(timeout=5.0)
+        if server_thread.is_alive():
+            print("Simulated broadcast server is still alive. Terminate with main thread.")
+
+        server.server_close()
+
+
+def simulate_agents(app_py: str, conf: Konfig) -> None:
     import multiprocessing as mp
     from src.scripts.run import main as run_app
 
@@ -41,7 +69,7 @@ def simulate_main(app_py: str, conf: Konfig) -> None:
 
     agent_proc_list = []
     for local_cfg in conf.gen_all_local_configs():
-        agent = local_cfg['agent']
+        local_cfg['agent']['plist'] = None  # FIXME plist is going to be removed
         device = local_cfg['device']
         # Generate a process object for each Agent
         device['ros_node_prefix'] = \
@@ -61,7 +89,7 @@ def simulate_main(app_py: str, conf: Konfig) -> None:
     except KeyboardInterrupt:
         print("User sent SIGINT. Sending SIGINT to all agent processes...")
         for agent in agent_proc_list:
-            agent.join(2.0)  # Wait for each agent for 2 second
+            agent.join(2.0)  # Wait for each agent for 2 seconds
     finally:
         for agent in agent_proc_list:
             if agent.is_alive():

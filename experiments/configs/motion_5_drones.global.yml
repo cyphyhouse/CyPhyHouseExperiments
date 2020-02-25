@@ -1,109 +1,54 @@
 leader_pid: 2
 mutex_handler: BaseMutexHandler
+udp_bcast_ip: 127.255.255.255
+udp_port: 61820
 agents:
     - pid: 0
-      plist: [2000, 2001, 2002, 2003, 2004]
       on_device: drone0
       motion_automaton: MoatHectorQuadrotor
     - pid: 1
-      plist: [2000, 2001, 2002, 2003, 2004]
       on_device: drone1
       motion_automaton: MoatHectorQuadrotor
     - pid: 2
-      plist: [2000, 2001, 2002, 2003, 2004]
       on_device: drone2
       motion_automaton: MoatHectorQuadrotor
     - pid: 3
-      plist: [2000, 2001, 2002, 2003, 2004]
       on_device: drone3
       motion_automaton: MoatHectorQuadrotor
     - pid: 4
-      plist: [2000, 2001, 2002, 2003, 2004]
       on_device: drone4
       motion_automaton: MoatHectorQuadrotor
 devices:
     drone0:
       bot_type: QUAD
-      ip: 127.255.255.255
-      port: 2000
-      ros_node_prefix: 'waypoint_node'
-      queue_size: 1
-      waypoint_topic:
-          topic: 'waypoint'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      reached_topic:
-          topic: 'reached'
-          type: String  # std_msgs/String
-      positioning_topic:
-          topic:  '/vrpn_client_node/'  # TODO '"/vrpn_client_node/" + vicon_obj + "/pose"'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      planner: SimplePlanner
-      motion_automata: [MoatTestDrone, MoatHectorQuadrotor]
+      ip: 127.0.1.0
+      motion: &cym_moat
+        ros_node_prefix: 'waypoint_node'
+        queue_size: 1
+        waypoint_topic:
+            topic: 'waypoint'
+            type: PoseStamped  # geometry_msgs/PoseStamped
+        reached_topic:
+            topic: 'reached'
+            type: String  # std_msgs/String
+        positioning_topic:
+            topic:  '/vrpn_client_node/'  # TODO '"/vrpn_client_node/" + vicon_obj + "/pose"'
+            type: PoseStamped  # geometry_msgs/PoseStamped
+        planner: SimplePlanner
+        motion_automata: [MoatTestDrone, MoatHectorQuadrotor]
     drone1:
       bot_type: QUAD
-      ip: 127.255.255.255
-      port: 2001
-      ros_node_prefix: 'waypoint_node'
-      queue_size: 1
-      waypoint_topic:
-          topic: 'waypoint'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      reached_topic:
-          topic: 'reached'
-          type: String  # std_msgs/String
-      positioning_topic:
-          topic:  '/vrpn_client_node/'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      planner: SimplePlanner
-      motion_automata: [MoatTestDrone, MoatHectorQuadrotor]
+      ip: 127.0.1.1
+      motion: *cym_moat
     drone2:
       bot_type: QUAD
-      ip: 127.255.255.255
-      port: 2002
-      ros_node_prefix: 'waypoint_node'
-      queue_size: 1
-      waypoint_topic:
-          topic: 'waypoint'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      reached_topic:
-          topic: 'reached'
-          type: String  # std_msgs/String
-      positioning_topic:
-          topic:  '/vrpn_client_node/'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      planner: SimplePlanner
-      motion_automata: [MoatTestDrone, MoatHectorQuadrotor]
+      ip: 127.0.1.2
+      motion: *cym_moat
     drone3:
       bot_type: QUAD
-      ip: 127.255.255.255
-      port: 2003
-      ros_node_prefix: 'waypoint_node'
-      queue_size: 1
-      waypoint_topic:
-          topic: 'waypoint'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      reached_topic:
-          topic: 'reached'
-          type: String  # std_msgs/String
-      positioning_topic:
-          topic:  '/vrpn_client_node/'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      planner: SimplePlanner
-      motion_automata: [MoatTestDrone, MoatHectorQuadrotor]
+      ip: 127.0.1.3
+      motion: *cym_moat
     drone4:
       bot_type: QUAD
-      ip: 127.255.255.255
-      port: 2004
-      ros_node_prefix: 'waypoint_node'
-      queue_size: 1
-      waypoint_topic:
-          topic: 'waypoint'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      reached_topic:
-          topic: 'reached'
-          type: String  # std_msgs/String
-      positioning_topic:
-          topic:  '/vrpn_client_node/'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      planner: SimplePlanner
-      motion_automata: [MoatTestDrone, MoatHectorQuadrotor]
+      ip: 127.0.1.4
+      motion: *cym_moat

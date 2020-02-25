@@ -1,40 +1,33 @@
 leader_pid: 0
 mutex_handler: BaseMutexHandler
+udp_bcast_ip: 127.255.255.255
+udp_port: 61820
 agents:
     - pid: 0
-      plist: [2000, 2001, 2002, 2003, 2004]
       on_device: drone0
     - pid: 1
-      plist: [2000, 2001, 2002, 2003, 2004]
       on_device: drone1
     - pid: 2
-      plist: [2000, 2001, 2002, 2003, 2004]
       on_device: drone2
     - pid: 3
-      plist: [2000, 2001, 2002, 2003, 2004]
       on_device: drone3
     - pid: 4
-      plist: [2000, 2001, 2002, 2003, 2004]
       on_device: drone4
 
 devices:
     drone0:
       bot_type: QUAD
-      ip: 127.255.255.255
-      port: 2000
+      ip: 127.0.1.0
     drone1:
       bot_type: QUAD
-      ip: 127.255.255.255
-      port: 2001
+      ip: 127.0.1.1
     drone2:
       bot_type: QUAD
-      ip: 127.255.255.255
-      port: 2002
+      ip: 127.0.1.2
     drone3:
       bot_type: QUAD
-      ip: 127.255.255.255
-      port: 2003
+      ip: 127.0.1.3
     drone4:
       bot_type: QUAD
-      ip: 127.255.255.255
-      port: 2004
+      ip: 127.0.1.4
+
