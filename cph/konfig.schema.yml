@@ -1,0 +1,27 @@
+leader_pid: int(min=0)
+mutex_handler: str()
+udp_bcast_ip: ip()
+udp_port: int(min=50000, max=65535)
+agents: list(include('agent'))
+devices: map(include('device'))
+---  # TODO custom validator to check finer constraints
+agent:
+    pid: int(min=0)
+    on_device: str()
+    nbr_pids: list(int(min=0), required=False)
+device:
+    bot_type: enum('CAR', 'QUAD')
+    ip: ip()
+    motion: include('moat', required=False)
+moat:
+    motion_automata: list(str())
+    planner: str()
+    ros_node_prefix: str()
+    positioning_topic: include('ros_topic')
+    reached_topic: include('ros_topic')
+    waypoint_topic: include('ros_topic')
+    queue_size: int(min=0, required=False)
+ros_topic:
+    topic: str()
+    type: str()
+
