@@ -65,11 +65,11 @@ $ ./experiment.sh apps/addnum.koord configs/no_motion_1_drone.global.yml
 To execute a Koord program that uses the Motion module, we need to first
 instantiate simulated devices in our Cymulator.
 
-**TODO:** The configuration file `simconfig_5_drones` for Cymulator is not well
+**TODO:** The configuration file `cym_5_drones` for Cymulator is not well
 designed. It should be merged into the same global configuration file.
 
 ```bash
-rosrun rosrun cym_gazebo cymulate.py simconfig_5_drones.yml
+rosrun cym_gazebo cymulate.py scenes/cym_5_drones.yml
 ```
 
 Similarly, we then use `experiment.sh` to start the experiment.
