@@ -1,88 +1,70 @@
 leader_pid: 1
 mutex_handler: BaseMutexHandler
+udp_bcast_ip: 127.255.255.255
+udp_port: 61820
 agents:
+    - pid: 0
+      on_device: drone0
+      motion_automaton: MoatTestDrone
     - pid: 1
-      plist: [2002, 2003]  # TODO use pid instead to refer to other agents
       on_device: drone1
       motion_automaton: MoatTestDrone
     - pid: 2
-      plist: [2001, 2003]
       on_device: drone2
       motion_automaton: MoatTestDrone
     - pid: 3
-      plist: [2001]
       on_device: hotdec_car
       motion_automaton: MoatTestCar
       
 devices:
     hotdec_car:
       bot_type: CAR
-      ip: 127.0.0.1
-      port: 2003
+      ip: 127.0.1.0
       ros_node_prefix: 'waypoint_node'
       queue_size: 1
-      waypoint_topic:
-          topic: 'waypoint'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      reached_topic:
-          topic: 'reached'
-          type: String  # std_msgs/String
-      positioning_topic:
-          topic:  '/vrpn_client_node/'  # TODO '"/vrpn_client_node/" + vicon_obj + "/pose"'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      planner: SimplePlanner
-      motion_automata: [MoatTestCar]
+      motion: &cym_moat_car  # Set anchor for reusing
+        waypoint_topic:
+            topic: 'waypoint'
+            type: PoseStamped  # geometry_msgs/PoseStamped
+        reached_topic:
+            topic: 'reached'
+            type: String  # std_msgs/String
+        positioning_topic:
+            topic:  '/vrpn_client_node/'  # TODO '"/vrpn_client_node/" + vicon_obj + "/pose"'
+            type: PoseStamped  # geometry_msgs/PoseStamped
+        planner: SimplePlanner
+        motion_automata: [MoatTestCar]
 
     f1car:
       bot_type: CAR
-      ip: 127.0.0.1
-      port: 2004
-      ros_node_prefix: 'waypoint_node'
-      queue_size: 1
-      waypoint_topic:
-          topic: 'waypoint'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      reached_topic:
-          topic: 'reached'
-          type: String  # std_msgs/String
-      positioning_topic:
-          topic:  '/vrpn_client_node/'  # TODO '"/vrpn_client_node/" + vicon_obj + "/pose"'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      planner: SimplePlanner
-      motion_automata: [MoatTestCar]
+      ip: 127.0.1.1
+      motion: *cym_moat_car  # Reuse car motion configs
+
+    drone0:
+      bot_type: QUAD
+      ip: 127.0.2.0
+      motion: &cym_moat_drone  # Set anchor for reusing
+        ros_node_prefix: 'waypoint_node'
+        queue_size: 1
+        waypoint_topic:
+            topic: 'waypoint'
+            type: PoseStamped  # geometry_msgs/PoseStamped
+        reached_topic:
+            topic: 'reached'
+            type: String  # std_msgs/String
+        positioning_topic:
+            topic:  '/vrpn_client_node/'  # TODO '"/vrpn_client_node/" + vicon_obj + "/pose"'
+            type: PoseStamped  # geometry_msgs/PoseStamped
+        planner: SimplePlanner
+        motion_automata: [MoatTestDrone]
 
     drone1:
       bot_type: QUAD
-      ip: 127.0.0.1
-      port: 2001
-      ros_node_prefix: 'waypoint_node'
-      queue_size: 1
-      waypoint_topic:
-          topic: 'waypoint'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      reached_topic:
-          topic: 'reached'
-          type: String  # std_msgs/String
-      positioning_topic:
-          topic:  '/vrpn_client_node/'  # TODO '"/vrpn_client_node/" + vicon_obj + "/pose"'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      planner: SimplePlanner
-      motion_automata: [MoatTestDrone]
+      ip: 127.0.2.1
+      motion: *cym_moat_drone  # Reuse car motion configs
 
     drone2:
       bot_type: QUAD
-      ip: 127.0.0.1
-      port: 2002
-      ros_node_prefix: 'waypoint_node'
-      queue_size: 1
-      waypoint_topic:
-          topic: 'waypoint'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      reached_topic:
-          topic: 'reached'
-          type: String  # std_msgs/String
-      positioning_topic:
-          topic:  '/vrpn_client_node/'  # TODO '"/vrpn_client_node/" + vicon_obj + "/pose"'
-          type: PoseStamped  # geometry_msgs/PoseStamped
-      planner: SimplePlanner
-      motion_automata: [MoatTestDrone]
+      ip: 127.0.2.2
+      motion: *cym_moat_drone
+

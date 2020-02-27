@@ -2,19 +2,21 @@ agent:
   motion_automaton: MoatTestDrone
   on_device: drone1
   pid: 1
-  plist: [2002, 2003]
 device:
   bot_name: drone1
   bot_type: QUAD
-  ip: 127.0.0.1
+  ip: 127.0.2.1
   motion_automata: [MoatTestDrone]
   planner: SimplePlanner
-  port: 2001
+  port: 61820
   positioning_topic: {topic: /vrpn_client_node/, type: PoseStamped}
   queue_size: 1
   reached_topic: {topic: reached, type: String}
-  ros_node_prefix: waypoint_node
+  ros_node_prefix: drone1/waypoint_node
   waypoint_topic: {topic: waypoint, type: PoseStamped}
 leader_pid: 1
 mutex_handler: BaseMutexHandler
-num_agents: 3
+num_agents: 4
+udp_bcast_ip: 127.255.255.255
+udp_port: 61820
+

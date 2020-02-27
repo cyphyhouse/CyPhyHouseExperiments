@@ -17,8 +17,7 @@ Example global configuration file
 Auto-generated Agent Local Configurations
 -----------------------------------------
 
-Example local configuration file for the device with ip ``127.0.0.1``
-and port ``2001``.
+Example local configuration file for one of the agents.
 
 .. literalinclude:: ../tests/data/sample.local.yml
     :language: yaml
