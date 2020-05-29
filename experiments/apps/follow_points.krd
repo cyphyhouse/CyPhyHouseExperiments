@@ -7,29 +7,30 @@ using Motion:
 
 local:
     int tries = 1
+    int p = 10 - 3*pid
 
 event1:
     pre: tries == 1
     eff:
-        Motion.target = pos3d(-2*pid, 2*pid, 1.0)
+        Motion.target = pos3d(-p, p, 1.0)
         tries = 2
 
 event2:
     pre: tries == 2 && Motion.reached
     eff:
-        Motion.target = pos3d(2*pid, 2*pid, 1.0)
+        Motion.target = pos3d(p, p, 1.0)
         tries = 3
 
 event3:
     pre: tries == 3 && Motion.reached
     eff:
-        Motion.target = pos3d(2*pid, -2*pid, 1.0)
+        Motion.target = pos3d(p, -p, 1.0)
         tries = 4
 
 event4:
     pre: tries == 4 && Motion.reached
     eff:
-        Motion.target = pos3d(-2*pid, -2*pid, 1.0)
+        Motion.target = pos3d(-p, -p, 1.0)
         tries = 5
 
 end:
