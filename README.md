@@ -38,6 +38,34 @@ CyPhyHouseExperiments is licensed under the terms of the NCSA License (see the f
 [LICENSE](LICENSE)).
 
 
+
+
+Installation
+============
+
+1.  Inside the src directory of a catkin_ws clone the following repos:
+  - `$ git clone https://github.com/cyphyhouse/CyPyHous3.git --branch for-cymulator`
+	- `$ git clone https://github.com/cyphyhouse/Cymulator`
+2. Run `$ catkin_make` inside your catkin_ws directory
+3.  Inside the `CyPyHous3` folder run `$ pip install -e ./` 
+4. `$ source devel/setup.bash` from you`catkin_ws` directory to source the new environment variables  
+5. In any directory clone the following repo: `$ git clone https://github.com/cyphyhouse/CyPhyHouseExperiments`
+6.   Download the latest version of the [koord langauge](https://github.com/cyphyhouse/KoordLanguage/releases)
+7.  In a separate terminal: ` $ rosrun cym_gazebo cymulate.py scenes/cym_5_drones.yml`  (make sure that this terminal contains the sourced environment variables from step 4)
+8.  Run a koord experiment:
+	- ` ./experiment.sh apps/lineform.koord configs/motion_5_drones.global.yml`
+	- `$ ./experiment_no_koord.sh app_py/follow_path.krd.py configs/motion_5_drones.global.yml`(if the above fails, note this is without koord, and probably means you have the wrong version of Java)
+  
+Installation Help
+-----------------
+If the installation fails please make sure the following packages are installed:
+- `ros-kinetic-gazebo9-ros-pkgs`
+- `libyaml-cpp-dev`
+-  Java version 1.11 (needed for using koord language)
+- `netifaces`
+- `defusedxml`
+
+
 Run experiment scripts
 ======================
 
