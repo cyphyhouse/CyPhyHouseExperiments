@@ -44,7 +44,7 @@ Installation
 ============
 
 1.  Inside the src directory of a catkin_ws clone the following repos:
-  - `$ git clone https://github.com/cyphyhouse/CyPyHous3.git --branch for-cymulator`
+ 	- `$ git clone https://github.com/cyphyhouse/CyPyHous3.git --branch for-cymulator`
 	- `$ git clone https://github.com/cyphyhouse/Cymulator`
 2. Run `$ catkin_make` inside your catkin_ws directory
 3.  Inside the `CyPyHous3` folder run `$ pip install -e ./` 
