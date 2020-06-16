@@ -19,7 +19,7 @@ class MotionHectorQuad:
         self._status = self.Status.STAYING
 
         self._var_lock = RLock()
-        self._position = Point()
+        self._position = (0.0, 0.0, 0.0)
 
         takeoff_topic = rospy.resolve_name(topic_prefix + "/action/takeoff")
         self._takeoff_client = SimpleActionClient(takeoff_topic, TakeoffAction)
@@ -29,13 +29,16 @@ class MotionHectorQuad:
         self._pose_client = SimpleActionClient(pose_topic, PoseAction)
 
     @property
-    def position(self) -> Point:
+    def position(self) -> Tuple[float, float, float]:
         with self._var_lock:
             # Return copy to avoid multiple threads accessing the same reference
             return deepcopy(self._position)
 
     @position.setter
-    def position(self, p: Point) -> None:
+    def position(self, p: Union[Point, Tuple[float, float, float]]) -> None:
+        if isinstance(p, Point):
+            p = (p.x, p.y, p.z)
+
         # NOTE the lock may be redundant because assigning references should be atomic
         with self._var_lock:
             self._position = p
@@ -49,16 +52,14 @@ class MotionHectorQuad:
                                           LandingGoal(), timeout)
 
     @staticmethod
-    def _to_pose_stamped(point: Point) -> PoseStamped:
+    def _to_pose_stamped(point: Tuple[float, float, float]) -> PoseStamped:
         target_pose = PoseStamped()
-        target_pose.header.stamp = rospy.Time.now()
         target_pose.header.frame_id = "world"
-        target_pose.pose.position = point
+        target_pose.pose.position = Point(*point)
         return target_pose
 
-    def send_target(self, point: Union[Point, Tuple[float, float, float]]):
-        if not isinstance(point, Point):
-            point = Point(*point)
+    def send_target(self, point: Tuple[float, float, float]):
+        self._pose_client.wait_for_server()
         pose_goal = PoseGoal(target_pose=self._to_pose_stamped(point))
         # NOTE Do not wait for result
         return self._pose_client.send_goal(pose_goal)
