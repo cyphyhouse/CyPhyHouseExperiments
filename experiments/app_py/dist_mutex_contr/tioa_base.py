@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 # TODO avoid importing rospy if not using ROS
 from geometry_msgs.msg import PoseStamped
+from rosgraph_msgs.msg import Clock
 import rospy
 from rospy.timer import sleep
 
@@ -100,7 +101,9 @@ def run_as_process(aut: AutomatonBase, conn: Connection,
                 raise RuntimeError("Unable to initialize position after %d sec."
                                    " Shutdown ROS node for motion." % timeout)
 
+        rospy.wait_for_message("/clock", Clock, timeout=5.0)  # Wait for first update of clock
         busy_waiting_start = rospy.Time.now()
+        print("Start %s at %.2f" % (aut, busy_waiting_start.to_sec()))
         while not stop_ev.is_set() and not aut.reached_sink_state():
             sleep(0.0)  # Yield to other threads
             # TODO avoid each iteration of while loop running indefinitely long
@@ -128,9 +131,9 @@ def run_as_process(aut: AutomatonBase, conn: Connection,
 
     except KeyboardInterrupt:
         print("KeyboardInterrupt.", end=' ')
-    except RuntimeError as e:
-        print(repr(e), end=' ')
+    # except RuntimeError as e:
+    #    print(repr(e), end=' ')
     finally:
-        print("Ending %s..." % aut)
+        print("Ending %s at %.2f..." % (aut, rospy.Time.now().to_sec()))
         rospy.signal_shutdown("Shutting down ROS node for %s" % aut)
         conn.close()
