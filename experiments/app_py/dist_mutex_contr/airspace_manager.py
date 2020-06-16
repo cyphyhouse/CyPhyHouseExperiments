@@ -1,17 +1,17 @@
 from collections import defaultdict
 from itertools import combinations
-from typing import Any, Dict, Hashable, Iterator, List, MutableSet, Tuple
+from typing import Dict, Hashable, Iterator, List, MutableSet, Tuple
+
+from reachtube.drone3d_types import Contract
 
 from .tioa_base import Action, AutomatonBase
-
-Contract = MutableSet[str]
 
 
 class AirspaceManager(AutomatonBase):
     def __init__(self) -> None:
         super(AirspaceManager, self).__init__()
 
-        self._contr_dict = defaultdict(set)  # type: Dict[Hashable, Contract]
+        self._contr_dict = defaultdict(Contract)  # type: Dict[Hashable, Contract]
         self._reply_set = set()  # type: MutableSet[Hashable]
 
     def is_internal(self, act: Action) -> bool:
@@ -29,7 +29,7 @@ class AirspaceManager(AutomatonBase):
 
     def transition(self, act: Action) -> None:
         if not isinstance(act, tuple) or not bool(act):
-            raise ValueError("Action should be a pair but received " + str(act))
+            raise ValueError("Action should be a pair but received %s." % act)
 
         if act[0] == "request":
             self._eff_request(**act[1])
@@ -40,7 +40,7 @@ class AirspaceManager(AutomatonBase):
         elif act[0] == "release":
             self._eff_release(**act[1])
         else:
-            raise ValueError("Unknown action \"" + str(act) + '"')
+            raise ValueError("Unknown action \"%s\"" % act)
 
     def _eff_request(self, uid: Hashable, target: Contract) -> None:
         self._reply_set.add(uid)

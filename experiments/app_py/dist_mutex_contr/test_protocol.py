@@ -1,6 +1,9 @@
 from multiprocessing import connection, Event, Pipe, Process
 from typing import List, Sequence
 
+from reachtube import Contract
+from scipy.spatial import Rectangle
+
 from .airspace_manager import AirspaceManager
 from .agent import Agent
 from .motion import MotionHectorQuad
@@ -26,7 +29,7 @@ def test_agent() -> None:
                 if act[0] == "request":
                     reply = input("> ")
                     conn.send(("reply", {"uid": aut.uid,
-                                         "acquired": set(reply)}))
+                                         "acquired": Contract()}))
             else:
                 print("Response timeout")
     finally:
@@ -53,11 +56,19 @@ def test_contract_manager() -> None:
                 print(act)
             elif i % 3 != 2:
                 uid = i % 5
-                target = input("Agent " + str(uid) + " request > ")
-                conn.send(("request", {"uid": uid, "target": set(target)}))
+                target = Contract.from_stamped_rectangles([
+                    (0.0, Rectangle(mins=[0, 0, 0], maxes=[1, 1, 0.5])),
+                    (0.5, Rectangle(mins=[0, 0.5, 0], maxes=[2, 3, 0.5])),
+                    (1.0, Rectangle(mins=[0.5, 0.5, 1.0], maxes=[1.5, 1.5, 1.5]))
+                    ])
+                conn.send(("request", {"uid": uid, "target": target}))
             else:
-                releasable = input("Agent " + str(uid) + " release > ")
-                conn.send(("release", {"uid": uid, "releasable": set(releasable)}))
+                releasable = Contract.from_stamped_rectangles([
+                    (0.0, Rectangle(mins=[0, 0, 0], maxes=[1, 1, 0.5])),
+                    (0.5, Rectangle(mins=[0, 0.5, 0], maxes=[2, 2, 0.5]))
+                    ])
+                print("Agent " + str(uid) + " release > " + str(releasable))
+                conn.send(("release", {"uid": uid, "releasable": releasable}))
     finally:
         stop_ev.set()  # Stop all automatons
         p.join()

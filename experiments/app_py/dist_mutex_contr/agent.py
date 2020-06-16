@@ -1,12 +1,22 @@
 from enum import Enum
-from typing import Any, Callable, Hashable, List, Optional, Set
+from typing import Any, Callable, Hashable, List, NamedTuple, Optional, Tuple
 
 import rospy  # FIXME avoid rospy
+
+import numpy as np
+from reachtube.drone3d_types import Contract
+from scipy.spatial import Rectangle
 
 from .motion import MotionHectorQuad
 from .tioa_base import Action, AutomatonBase
 
-Contract = Set[Any]
+StampT = float
+StampedPoint = NamedTuple('StampedPoint',
+                          [('stamp', StampT),
+                           ('position', Tuple[float, float, float])])
+StampedRect = NamedTuple('StampedRect',
+                         [('stamp', StampT),
+                          ('rect', Rectangle)])
 
 
 class Agent(AutomatonBase):
@@ -24,11 +34,22 @@ class Agent(AutomatonBase):
         self.__uid = uid  # Set it as private to avoid being modified
         self.__motion = motion
 
+        if self.uid == 0:
+            self.__way_points = [(0, 0, 1), (2, 0, 1), (4, 0, 1), (6, 0, 1)]
+        elif self.uid == 1:
+            self.__way_points = [(0, 0, 1), (0, 2, 1), (0, 4, 1), (0, 6, 1)]
+        elif self.uid == 2:
+            self.__way_points = [(0, 0, 1), (-2, 0, 1), (-4, 0, 1), (-6, 0, 1)]
+        elif self.uid == 3:
+            self.__way_points = [(0, 0, 1), (0, -2, 1), (0, -4, 1), (0, -6, 1)]
+        else:
+            self.__way_points = []  # type: List[Tuple[float, float, float]]
+
         self._status = Agent.Status.IDLE
-        self._plan_contr = set()  # type: Contract
-        self._curr_contr = set()  # type: Contract
-        self._free_contr = set()  # type: Contract
-        self._deadline = None
+        self._plan = []  # type: List[StampedRect]
+        self._plan_contr = Contract()  # type: Contract
+        self._curr_contr = Contract()  # type: Contract
+        self._free_contr = Contract()  # type: Contract
         self._retry_time = self.clk
 
         # Continuously updated variables
@@ -66,7 +87,7 @@ class Agent(AutomatonBase):
                 if pre is None or pre(**kwargs):
                     eff(**kwargs)
                 else:
-                    raise RuntimeError("Precondition for \"%s\"is not satisfied." % str(act[0]))
+                    raise RuntimeError("Precondition for \"%s\" is not satisfied." % str(act[0]))
             return trans
 
         eff_dict = {
@@ -89,15 +110,13 @@ class Agent(AutomatonBase):
         return self._status == Agent.Status.IDLE and self._retry_time <= self.clk
 
     def _eff_plan(self) -> None:
-        # TODO compute plan
-        if True:
-            if self.uid == 0:
-                self._plan_contr = {(1, 1, 3), (2, 2, 3), (3, 3, 3)}
-            elif self.uid == 1:
-                self._plan_contr = {(1, 5, 3), (2, 4, 3), (3, 3, 3)}
-            elif self.uid == 2:
-                self._plan_contr = {(5, 5, 3), (4, 4, 3), (3, 3, 3)}
-
+        if self.__way_points:
+            rect_list = _bloat_path(self._position,
+                                    self.__way_points)
+            self._plan = [StampedRect(self.clk.to_sec() + 5*i, rect)
+                          for i, rect in enumerate(rect_list)]
+            self._plan_contr = Contract.from_stamped_rectangles(
+                self._plan)
             self._status = Agent.Status.PLANNED
 
     def _pre_request(self, uid: Hashable, target: Contract) -> bool:
@@ -109,17 +128,17 @@ class Agent(AutomatonBase):
 
     def _eff_reply(self, uid: Hashable, acquired: Contract) -> None:
         if self._status == Agent.Status.REQUESTED:
-            if self._curr_contr > acquired:
-                raise RuntimeError("Acquired contract is smaller than current contract.")
-            elif self._plan_contr <= acquired:  # and self._curr_contr <= acquired
+            if not (self._curr_contr <= acquired):
+                # raise RuntimeError("Current contract is not a subset of acquired contract.\n"
+                #                     "Current: %s\nAcquired: %s" % (repr(self._curr_contr), repr(acquired)))
+                pass
+            if self._plan_contr <= acquired:  # and self._curr_contr <= acquired
                 # Acquired enough contract to execute plan
                 self._curr_contr = acquired
-                tgt = next(iter(self._plan_contr))
+                tgt = self.__way_points[len(self.__way_points) + 1 - len(self._plan)]
                 print("%s going to %s." % (self, str(tgt)))
                 self.__motion.send_target(tgt)
 
-                self._deadline = rospy.Time.now() + rospy.Duration(5)
-                print("Current time: %s, Deadline: %s" % (self.clk.to_sec(), self._deadline.to_sec()))
                 self._status = Agent.Status.MOVING
             else:
                 # Not enough contract for the plan. Keep only current contracts
@@ -129,21 +148,23 @@ class Agent(AutomatonBase):
             raise RuntimeWarning("Unexpected \"reply\" action.")
 
     def _pre_next_region(self) -> bool:
-        return self._status == Agent.Status.MOVING and len(self._plan_contr) >= 2 \
-            and self.clk >= self._deadline  # TODO self._plan_contr[1].stamp
+        return self._status == Agent.Status.MOVING and len(self._plan) >= 2 \
+            and self.clk.to_sec() >= self._plan[1].stamp
 
     def _eff_next_region(self) -> None:
-        self._plan_contr.pop()
-        tgt = next(iter(self._plan_contr))
-        print("%s going to %s." % (self, str(tgt)))
-        self.__motion.send_target(tgt)
+        self._plan.pop(0)
+        self._plan_contr = Contract.from_stamped_rectangles(self._plan)
 
-        self._deadline = rospy.Time.now() + rospy.Duration(secs=5)
-        print("Current time: %s, Deadline: %s" % (self.clk.to_sec(), self._deadline.to_sec()))
+        if len(self._plan) >= 2:
+            idx = len(self.__way_points) + 1 - len(self._plan)
+            assert 0 <= idx < len(self.__way_points)
+            tgt = self.__way_points[idx]
+            print("%s going to %s." % (self, str(tgt)))
+            self.__motion.send_target(tgt)
 
     def _pre_succeed(self) -> bool:
-        return self._status == Agent.Status.MOVING and len(self._plan_contr) == 1 \
-            and (self.__motion.position, self.clk)  # TODO in self._plan_contr[0]
+        return self._status == Agent.Status.MOVING and len(self._plan) == 1 \
+            and True  # TODO StampedPoint(self.clk.to_sec(), self._position) in self._plan_contr
 
     def _eff_succeed(self) -> None:
         self._free_contr = self._curr_contr - self._plan_contr
@@ -151,8 +172,8 @@ class Agent(AutomatonBase):
         print("Agent %d succeeded" % self.__uid)
 
     def _pre_fail(self) -> bool:
-        return self._status == Agent.Status.MOVING and len(self._plan_contr) >= 1 \
-            and not (self.__motion.position, self.clk)  # TODO in self._plan_contr[0]
+        return self._status == Agent.Status.MOVING \
+            and False  # TODO StampedPoint(self.clk.to_sec(), self._position) not in self._plan_contr
 
     def _eff_fail(self) -> None:
         raise RuntimeError("Failed to follow the plan contract.")
@@ -191,3 +212,30 @@ class Agent(AutomatonBase):
     def _update_continuous_vars(self) -> None:
         super(Agent, self)._update_continuous_vars()
         self._position = self.__motion.position
+
+
+BLOAT_WIDTH = 0.2
+
+
+def _bloat_point(p: Tuple[float, float, float]) -> Rectangle:
+    p_arr = np.array(p)
+    return Rectangle(mins=p_arr - BLOAT_WIDTH,
+                     maxes=p_arr + BLOAT_WIDTH)
+
+
+def _bloat_path(cur_pos: Tuple[float, float, float],
+                way_points: List[Tuple[float, float, float]]) -> List[Rectangle]:
+    ret = []  # type: List[Rectangle]
+    prev_rect = _bloat_point(cur_pos)
+    for p in way_points:
+        curr_rect = _bloat_point(p)
+        ret.append(_bloat_segment(prev_rect, curr_rect))
+        prev_rect = curr_rect
+    ret.append(prev_rect)  # Stay in the last rect
+    return ret
+
+
+def _bloat_segment(bloat_a: Rectangle, bloat_b: Rectangle) -> Rectangle:
+    new_maxes = np.maximum(bloat_a.maxes, bloat_b.maxes)
+    new_mins = np.minimum(bloat_a.mins, bloat_b.mins)
+    return Rectangle(maxes=new_maxes, mins=new_mins)
