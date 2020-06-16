@@ -3,7 +3,7 @@
 PATH_APP_PY=$1
 PATH_CONFIG=$2
 
-TIMEOUT="120s"
+TIMEOUT="1000s"
 
 
 if [ ! -f "$PATH_APP_PY" ]; then

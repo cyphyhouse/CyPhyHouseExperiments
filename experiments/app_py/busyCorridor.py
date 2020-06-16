@@ -1,3 +1,6 @@
+import rospy
+from geometry_msgs.msg import PoseStamped, Point
+
 from src.harness.agentThread import AgentThread
 
 
@@ -7,26 +10,47 @@ class Follow_points(AgentThread):
         super(Follow_points, self).__init__(config, motion_config)
 
 
+
+        self.waypoints = [[(-60.0, -65.0, 1.0), (-45.0, -65.0, 1.0), (-39.0, -65.0, 0.3)],
+                          [(-60.0, -65.0, 1.0), (-45.0, -65.0, 1.0), (-39.0, -66.0, 0.3)],
+                          [(-60.0, -65.0, 1.0), (-45.0, -65.0, 1.0), (-39.0, -67.0, 0.3)],
+                          [(-45.0, -67.0, 1.0), (-60.0, -67.0, 1.0), (-80.0, -67.0, 0.3)],
+                          [(-45.0, -67.0, 1.0), (-60.0, -67.0, 1.0), (-80.0, -68.0, 0.3)],
+                          [(-45.0, -67.0, 1.0), (-60.0, -67.0, 1.0), (-80.0, -69.0, 0.3)]]
+
+        if self.pid() == 0 or self.pid() == 3 :
+            self.nextWaypt = True
+        else:
+            self.nextWaypt = False
+            rospy.Subscriber('/vrpn_client_node/drone'+str(self.pid()-1)+'/pose', PoseStamped, self.leadDronePose)
+
+    def leadDronePose(self, data):
+        currPos = (data.pose.position.x,  data.pose.position.y,  data.pose.position.z)
+        #print("lead pid: ", currPos)
+        goalPos = (self.waypoints[self.pid()-1][1][0],self.waypoints[self.pid()-1][1][1], self.waypoints[self.pid()-1][1][2])
+
+        if (currPos[0]-.05 < goalPos[0] < currPos[0]+.05) and (currPos[1]-.05 < goalPos[1] < currPos[1]+.05) and self.nextWaypt == False:
+            self.nextWaypt = True
+
+
+
+
     def initialize_vars(self):
         self.locals = {}
         self.locals['tries'] = 1
         self.locals['p'] = 10 - 3 * self.pid()
 
 
-        # self.waypoints = [[(20,14,1), (23,0,1), (16,-16,1), (-4,-4,1)],
-        #                   [(14.5,-16,2), (26,0,2), (20,14,2), (7,8,2)],
-        #                   [(2,2,1.5), (-2,-2,1.5), (-2,2,1.5), (0,0,1.5)]]
-
-        self.waypoints = [[(19,13,1), (23,0,1), (16,-16,1), (-4,-4,1)],
-                          [(18,13.5,2), (26,0,2), (20,-17,2), (-4,-7,2)],
-                          [(16,14.5,3), (29,0,3), (22,-17,3), (-7,-7,3)],]
+        # self.waypoints = [[(-70,-68,1), (-45,-68,1)],
+        #                   [(-70,-68,1), (-45,-68,1)],
+        #                   [(-70,-68,1), (-45,-68,1)]]
 
         self.waypoint_num = 0
 
         self.locals[self.pid()] = self.waypoints[self.pid()]
 
     def loop_body(self):
-        if self.locals['tries'] == 1:
+        if self.locals['tries'] == 1 and self.nextWaypt:
             x = self.locals[self.pid()][self.waypoint_num][0]
             y = self.locals[self.pid()][self.waypoint_num][1]
             z = self.locals[self.pid()][self.waypoint_num][2]
@@ -34,7 +58,7 @@ class Follow_points(AgentThread):
             self.locals['tries'] += 1
             self.waypoint_num += 1
             return
-        if self.locals['tries'] < 5 and self.read_from_sensor('Motion.reached'):
+        if self.locals['tries'] <= len(self.waypoints[self.pid()]) and self.read_from_sensor('Motion.reached') and self.nextWaypt:
             x = self.locals[self.pid()][self.waypoint_num][0]
             y = self.locals[self.pid()][self.waypoint_num][1]
             z = self.locals[self.pid()][self.waypoint_num][2]
@@ -42,9 +66,10 @@ class Follow_points(AgentThread):
             self.locals['tries'] += 1
             self.waypoint_num += 1
             return
-        if self.locals['tries'] == 4 and self.read_from_sensor('Motion.reached'):
+        if self.locals['tries'] == len(self.waypoints[self.pid()])+1 and self.read_from_sensor('Motion.reached') and self.nextWaypt:
             self.trystop()
             return
+
 
         # if self.locals['tries'] == 1:
         #     self.write_to_actuator('Motion.target', self.pos3d( -self.locals['p'], self.locals['p'], 1.0))
