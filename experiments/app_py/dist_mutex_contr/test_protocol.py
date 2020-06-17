@@ -94,7 +94,9 @@ def test_protocol(num_agents: int = 5) -> None:
     stop_ev = Event()
 
     aut_list = [AirspaceManager()]  # type: List[AutomatonBase]
-    aut_list.extend(Agent(uid, MotionHectorQuad("/drone" + str(uid))) for uid in range(num_agents))
+
+    aut_list.extend(Agent(uid, MotionHectorQuad(uid))
+                    for uid in ("drone" + str(i) for i in range(num_agents)))
 
     proc_list = []  # type: List[Process]
     channel_conn_list = []  # type: List[connection.Connection]

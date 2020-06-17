@@ -34,13 +34,13 @@ class Agent(AutomatonBase):
         self.__uid = uid  # Set it as private to avoid being modified
         self.__motion = motion
 
-        if self.uid == 0:
+        if self.uid == "drone0":
             self.__way_points = [(0, 0, 1), (2, 0, 1), (4, 0, 1), (6, 0, 1)]
-        elif self.uid == 1:
+        elif self.uid == "drone1":
             self.__way_points = [(0, 0, 1), (0, 2, 1), (0, 4, 1), (0, 6, 1)]
-        elif self.uid == 2:
+        elif self.uid == "drone2":
             self.__way_points = [(0, 0, 1), (-2, 0, 1), (-4, 0, 1), (-6, 0, 1)]
-        elif self.uid == 3:
+        elif self.uid == "drone3":
             self.__way_points = [(0, 0, 1), (0, -2, 1), (0, -4, 1), (0, -6, 1)]
         else:
             self.__way_points = []  # type: List[Tuple[float, float, float]]
@@ -169,7 +169,7 @@ class Agent(AutomatonBase):
     def _eff_succeed(self) -> None:
         self._free_contr = self._curr_contr - self._plan_contr
         self._status = Agent.Status.FINISHED
-        print("Agent %d succeeded" % self.__uid)
+        print("Agent %s succeeded" % str(self.__uid))
 
     def _pre_fail(self) -> bool:
         return self._status == Agent.Status.MOVING \
