@@ -83,10 +83,9 @@ def run_as_process(aut: AutomatonBase, conn: Connection,
         # Initialize Publishers and Subscribers
 
         # FIXME TIOA should not depend on specific implementations
-        if hasattr(aut, "motion"):
-            from .agent import Agent
-            assert isinstance(aut, Agent)
-            pose_topic_name = "/vrpn_client_node/drone" + str(aut.uid) + "/pose"
+        from .agent import Agent
+        if isinstance(aut, Agent):
+            pose_topic_name = "/vrpn_client_node/%s/pose" % str(aut.uid)
 
             def update_position(data: PoseStamped):
                 aut.motion.position = data.pose.position
@@ -94,12 +93,7 @@ def run_as_process(aut: AutomatonBase, conn: Connection,
             # NOTE This creates a thread in this process
             rospy.Subscriber(pose_topic_name, PoseStamped, update_position, queue_size=10)
 
-            timeout = 10
-            try:
-                rospy.wait_for_message(pose_topic_name, PoseStamped, timeout=timeout)
-            except rospy.ROSException:
-                raise RuntimeError("Unable to initialize position after %d sec."
-                                   " Shutdown ROS node for motion." % timeout)
+            rospy.wait_for_message(pose_topic_name, PoseStamped, timeout=10.0)
 
         rospy.wait_for_message("/clock", Clock, timeout=5.0)  # Wait for first update of clock
         busy_waiting_start = rospy.Time.now()
