@@ -120,6 +120,7 @@ def test_protocol(num_agents: int = 5) -> None:
             sent_act_list = _multicast(channel_conn_list)
             act_list.extend(sent_act_list)
     finally:
+        print("Sending stop event...")
         stop_ev.set()  # Stop all automatons
         for proc in proc_list:
             proc.join(2)
@@ -131,8 +132,12 @@ def test_protocol(num_agents: int = 5) -> None:
             conn.close()
 
         print("========== Recorded Actions =========")
-        for act in act_list:
-            print(act)
+        # TODO More detailed statistics
+        print("Total actions: %d, Requests: %d, Replies: %d, Releases: %d" %
+              (len(act_list),
+               sum(act[0] == "request" for act in act_list),
+               sum(act[0] == "request" for act in act_list),
+               sum(act[0] == "release" for act in act_list)))
 
 
 if __name__ == "__main__":
