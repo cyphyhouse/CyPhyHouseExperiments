@@ -52,6 +52,8 @@ class Agent(AutomatonBase):
         self._free_contr = Contract()  # type: Contract
         self._retry_time = self.clk
 
+        self._failure_reported = False
+
         # Continuously updated variables
         # self.__motion.position may be modified by ROS subscribers concurrently
         # so we need self._position to stay the same during a transition
@@ -63,6 +65,10 @@ class Agent(AutomatonBase):
     @property
     def uid(self) -> Hashable:
         return self.__uid
+
+    @property
+    def motion(self) -> MotionHectorQuad:
+        return self.__motion
 
     def is_internal(self, act: Action) -> bool:
         return act[0] == "plan" \
@@ -97,7 +103,7 @@ class Agent(AutomatonBase):
             "reply": build_trans(eff=self._eff_reply),
             "next_region": build_trans(pre=self._pre_next_region, eff=self._eff_next_region),
             "succeed": build_trans(pre=self._pre_succeed, eff=self._eff_succeed),
-            "fail": build_trans(pre=self._pre_succeed, eff=self._eff_succeed),
+            "fail": build_trans(pre=self._pre_fail, eff=self._eff_fail),
             "release": build_trans(pre=self._pre_release, eff=self._eff_release)
         }
 
@@ -129,9 +135,8 @@ class Agent(AutomatonBase):
     def _eff_reply(self, uid: Hashable, acquired: Contract) -> None:
         if self._status == Agent.Status.REQUESTED:
             if not (self._curr_contr <= acquired):
-                # raise RuntimeError("Current contract is not a subset of acquired contract.\n"
-                #                     "Current: %s\nAcquired: %s" % (repr(self._curr_contr), repr(acquired)))
-                pass
+                raise RuntimeError("Current contract is not a subset of acquired contract.\n"
+                                   "Current: %s\nAcquired: %s" % (repr(self._curr_contr), repr(acquired)))
             if self._plan_contr <= acquired:  # and self._curr_contr <= acquired
                 # Acquired enough contract to execute plan
                 self._curr_contr = acquired
@@ -152,6 +157,7 @@ class Agent(AutomatonBase):
             and self.clk.to_sec() >= self._plan[1].stamp
 
     def _eff_next_region(self) -> None:
+        self._failure_reported = False
         self._plan.pop(0)
         self._plan_contr = Contract.from_stamped_rectangles(self._plan)
 
@@ -164,7 +170,7 @@ class Agent(AutomatonBase):
 
     def _pre_succeed(self) -> bool:
         return self._status == Agent.Status.MOVING and len(self._plan) == 1 \
-            and True  # TODO StampedPoint(self.clk.to_sec(), self._position) in self._plan_contr
+            and StampedPoint(self.clk.to_sec(), self._position) in self._plan_contr
 
     def _eff_succeed(self) -> None:
         self._free_contr = self._curr_contr - self._plan_contr
@@ -173,10 +179,14 @@ class Agent(AutomatonBase):
 
     def _pre_fail(self) -> bool:
         return self._status == Agent.Status.MOVING \
-            and False  # TODO StampedPoint(self.clk.to_sec(), self._position) not in self._plan_contr
+            and not self._failure_reported \
+            and StampedPoint(self.clk.to_sec(), self._position) not in self._plan_contr
 
     def _eff_fail(self) -> None:
-        raise RuntimeError("Failed to follow the plan contract.")
+        rospy.logerr("Failed to follow the plan contract. (%.2f, %s) not in %s."
+                     " Real position: %s" %
+                     (self.clk.to_sec(), str(self._position), str(self._plan_contr), str(self.__motion.position)))
+        self._failure_reported = True
 
     def _pre_release(self, uid: Hashable, releasable: Contract) -> bool:
         return self._status == Agent.Status.FINISHED \
@@ -214,7 +224,7 @@ class Agent(AutomatonBase):
         self._position = self.__motion.position
 
 
-BLOAT_WIDTH = 0.2
+BLOAT_WIDTH = 0.75
 
 
 def _bloat_point(p: Tuple[float, float, float]) -> Rectangle:
