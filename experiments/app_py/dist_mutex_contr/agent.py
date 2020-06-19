@@ -63,6 +63,14 @@ class Agent(AutomatonBase):
         return self.__class__.__name__ + "_" + str(self.uid)
 
     @property
+    def _target(self) -> Tuple[float, float, float]:
+        raise RuntimeWarning("Reading actuator value is not allowed")
+
+    @_target.setter
+    def _target(self, p: Tuple[float, float, float]) -> None:
+        self.__motion.send_target(p)
+
+    @property
     def uid(self) -> Hashable:
         return self.__uid
 
@@ -142,7 +150,7 @@ class Agent(AutomatonBase):
                 self._curr_contr = acquired
                 tgt = self.__way_points[len(self.__way_points) + 1 - len(self._plan)]
                 print("%s going to %s." % (self, str(tgt)))
-                self.__motion.send_target(tgt)
+                self._target = tgt
 
                 self._status = Agent.Status.MOVING
             else:
@@ -166,7 +174,7 @@ class Agent(AutomatonBase):
             assert 0 <= idx < len(self.__way_points)
             tgt = self.__way_points[idx]
             print("%s going to %s." % (self, str(tgt)))
-            self.__motion.send_target(tgt)
+            self._target = tgt
 
     def _pre_succeed(self) -> bool:
         return self._status == Agent.Status.MOVING and len(self._plan) == 1 \
