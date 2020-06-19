@@ -22,11 +22,11 @@ StampedRect = NamedTuple('StampedRect',
 class Agent(AutomatonBase):
     class Status(Enum):
         IDLE = 0
-        PLANNED = 1
-        REQUESTED = 2
+        REQUESTING = 1
+        WAITING = 2
         MOVING = 4
-        FINISHED = 5
-        STOPPED = 6
+        RELEASING = 5
+        STOPPING = 6
 
     def __init__(self, uid: Hashable, motion: MotionHectorQuad):
         super(Agent, self).__init__()
@@ -123,17 +123,17 @@ class Agent(AutomatonBase):
                           for i, rect in enumerate(rect_list)]
             self._plan_contr = Contract.from_stamped_rectangles(
                 self._plan)
-            self._status = Agent.Status.PLANNED
+            self._status = Agent.Status.REQUESTING
 
     def _pre_request(self, uid: Hashable, target: Contract) -> bool:
-        return self._status == Agent.Status.PLANNED \
+        return self._status == Agent.Status.REQUESTING \
             and target == self._plan_contr
 
     def _eff_request(self, uid: Hashable, target: Contract) -> None:
-        self._status = Agent.Status.REQUESTED
+        self._status = Agent.Status.WAITING
 
     def _eff_reply(self, uid: Hashable, acquired: Contract) -> None:
-        if self._status == Agent.Status.REQUESTED:
+        if self._status == Agent.Status.WAITING:
             if not (self._curr_contr <= acquired):
                 raise RuntimeError("Current contract is not a subset of acquired contract.\n"
                                    "Current: %s\nAcquired: %s" % (repr(self._curr_contr), repr(acquired)))
@@ -148,7 +148,7 @@ class Agent(AutomatonBase):
             else:
                 # Not enough contract for the plan. Keep only current contracts
                 self._free_contr = acquired - self._curr_contr
-                self._status = Agent.Status.FINISHED
+                self._status = Agent.Status.RELEASING
         else:
             raise RuntimeWarning("Unexpected \"reply\" action.")
 
@@ -174,7 +174,7 @@ class Agent(AutomatonBase):
 
     def _eff_succeed(self) -> None:
         self._free_contr = self._curr_contr - self._plan_contr
-        self._status = Agent.Status.FINISHED
+        self._status = Agent.Status.RELEASING
         print("Agent %s succeeded" % str(self.__uid))
 
     def _pre_fail(self) -> bool:
@@ -189,7 +189,7 @@ class Agent(AutomatonBase):
         self._failure_reported = True
 
     def _pre_release(self, uid: Hashable, releasable: Contract) -> bool:
-        return self._status == Agent.Status.FINISHED \
+        return self._status == Agent.Status.RELEASING \
             and uid == self.uid \
             and releasable == self._free_contr
 
@@ -200,13 +200,13 @@ class Agent(AutomatonBase):
         self._retry_time = self.clk + rospy.Duration(secs=2)  # Wait for a while before next plan
 
     def reached_sink_state(self) -> bool:
-        return self._status == Agent.Status.STOPPED
+        return self._status == Agent.Status.STOPPING
 
     def _enabled_actions(self) -> List[Action]:
         ret = []  # type: List[Action]
         if self._pre_plan():
             ret.append(("plan", {}))
-        if self._status == Agent.Status.PLANNED:
+        if self._status == Agent.Status.REQUESTING:
             ret.append(("request", {"uid": self.uid, "target": self._plan_contr}))
         if self._pre_next_region():
             ret.append(("next_region", {}))
@@ -214,7 +214,7 @@ class Agent(AutomatonBase):
             ret.append(("succeed", {}))
         if self._pre_fail():
             ret.append(("fail", {}))
-        if self._status == Agent.Status.FINISHED:
+        if self._status == Agent.Status.RELEASING:
             ret.append(("release", {"uid": self.uid, "releasable": self._free_contr}))
 
         return ret
