@@ -1,9 +1,12 @@
-from multiprocessing import Event, Pipe, Process
-from multiprocessing import connection
-from typing import List, Sequence, Tuple, Any
+from multiprocessing import connection, Event, Pipe, Process
+from typing import List, Sequence
+
+from reachtube import Contract
+from scipy.spatial import Rectangle
 
 from .airspace_manager import AirspaceManager
 from .agent import Agent
+from .motion import MotionHectorQuad
 from .tioa_base import AutomatonBase, run_as_process
 
 
@@ -11,7 +14,7 @@ def test_agent() -> None:
     stop_ev = Event()
     conn, agent_conn = Pipe()
 
-    aut = Agent(uid=1)
+    aut = Agent(uid=1, motion=MotionHectorQuad("/drone1"))
 
     p = Process(target=run_as_process, kwargs={"aut": aut,
                                                "conn": agent_conn,
@@ -26,7 +29,7 @@ def test_agent() -> None:
                 if act[0] == "request":
                     reply = input("> ")
                     conn.send(("reply", {"uid": aut.uid,
-                                         "acquired": set(reply)}))
+                                         "acquired": Contract()}))
             else:
                 print("Response timeout")
     finally:
@@ -53,11 +56,19 @@ def test_contract_manager() -> None:
                 print(act)
             elif i % 3 != 2:
                 uid = i % 5
-                target = input("Agent " + str(uid) + " request > ")
-                conn.send(("request", {"uid": uid, "target": set(target)}))
+                target = Contract.from_stamped_rectangles([
+                    (0.0, Rectangle(mins=[0, 0, 0], maxes=[1, 1, 0.5])),
+                    (0.5, Rectangle(mins=[0, 0.5, 0], maxes=[2, 3, 0.5])),
+                    (1.0, Rectangle(mins=[0.5, 0.5, 1.0], maxes=[1.5, 1.5, 1.5]))
+                    ])
+                conn.send(("request", {"uid": uid, "target": target}))
             else:
-                releasable = input("Agent " + str(uid) + " release > ")
-                conn.send(("release", {"uid": uid, "releasable": set(releasable)}))
+                releasable = Contract.from_stamped_rectangles([
+                    (0.0, Rectangle(mins=[0, 0, 0], maxes=[1, 1, 0.5])),
+                    (0.5, Rectangle(mins=[0, 0.5, 0], maxes=[2, 2, 0.5]))
+                    ])
+                print("Agent " + str(uid) + " release > " + str(releasable))
+                conn.send(("release", {"uid": uid, "releasable": releasable}))
     finally:
         stop_ev.set()  # Stop all automatons
         p.join()
@@ -82,23 +93,19 @@ def _multicast(conn_seq: Sequence[connection.Connection]) -> Sequence[bytes]:
 def test_protocol(num_agents: int = 5) -> None:
     stop_ev = Event()
 
-    def functor(uid):
-        def build_motion() -> None:
-            return None
-        return build_motion
+    aut_list = [AirspaceManager()]  # type: List[AutomatonBase]
 
-    aut_list = [(AirspaceManager(), None)]  # type: List[Tuple[AutomatonBase, Any]]
-    aut_list += [(Agent(uid), functor(uid)) for uid in range(num_agents)]
+    aut_list.extend(Agent(uid, MotionHectorQuad(uid))
+                    for uid in ("drone" + str(i) for i in range(num_agents)))
 
     proc_list = []  # type: List[Process]
     channel_conn_list = []  # type: List[connection.Connection]
-    for aut, aut_ctrl in aut_list:
+    for aut in aut_list:
         channel_conn, aut_conn = Pipe()
         channel_conn_list.append(channel_conn)
         proc_list.append(Process(target=run_as_process,
                                  kwargs={"aut": aut,
                                          "conn": aut_conn,
-                                         "ctrl": aut_ctrl,
                                          "stop_ev": stop_ev}))
 
     act_list = []  # type: List[bytes]
@@ -108,20 +115,29 @@ def test_protocol(num_agents: int = 5) -> None:
             while not proc.is_alive():
                 pass
 
-        while len(act_list) < 10 and not stop_ev.is_set():
+        while len(act_list) < 1000 and not stop_ev.is_set():
             # Multicast messages
             sent_act_list = _multicast(channel_conn_list)
             act_list.extend(sent_act_list)
     finally:
+        print("Sending stop event...")
         stop_ev.set()  # Stop all automatons
         for proc in proc_list:
-            proc.join()
+            proc.join(2)
+        for proc in proc_list:
+            if proc.is_alive():
+                print(proc.name, "is still alive. Escalate to SIGTERM")
+                proc.terminate()
         for conn in channel_conn_list:
             conn.close()
 
         print("========== Recorded Actions =========")
-        for act in act_list:
-            print(act)
+        # TODO More detailed statistics
+        print("Total actions: %d, Requests: %d, Replies: %d, Releases: %d" %
+              (len(act_list),
+               sum(act[0] == "request" for act in act_list),
+               sum(act[0] == "request" for act in act_list),
+               sum(act[0] == "release" for act in act_list)))
 
 
 if __name__ == "__main__":
@@ -129,7 +145,7 @@ if __name__ == "__main__":
         # TODO make them individual test files
         # test_agent()
         # test_contract_manager()
-        test_protocol()
+        test_protocol(num_agents=3)
     except KeyboardInterrupt:
         print("KeyboardInterrupt.")
     finally:

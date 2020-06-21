@@ -4,9 +4,10 @@ from multiprocessing.connection import Connection
 from typing import Any, Dict, List, Optional, Tuple
 
 # TODO avoid importing rospy if not using ROS
+from geometry_msgs.msg import PoseStamped
+from rosgraph_msgs.msg import Clock
 import rospy
 from rospy.timer import sleep
-
 
 Action = Tuple[str, Dict[str, Any]]
 
@@ -75,16 +76,28 @@ def _select_act(aut: AutomatonBase, conn: Connection) -> Optional[Action]:
 
 
 def run_as_process(aut: AutomatonBase, conn: Connection,
-                   stop_ev: Event, ctrl: Optional[Any] = None, **kwargs: Any) -> None:
+                   stop_ev: Event, **kwargs: Any) -> None:
     """ NOTE: Must be executed in the main thread of a process """
     try:
         rospy.init_node(repr(aut), anonymous=True, disable_signals=False)
         # Initialize Publishers and Subscribers
 
-        if ctrl is not None:
-            print(ctrl)
+        # FIXME TIOA should not depend on specific implementations
+        from .agent import Agent
+        if isinstance(aut, Agent):
+            pose_topic_name = "/vrpn_client_node/%s/pose" % str(aut.uid)
 
+            def update_position(data: PoseStamped):
+                aut.motion.position = data.pose.position
+
+            # NOTE This creates a thread in this process
+            rospy.Subscriber(pose_topic_name, PoseStamped, update_position, queue_size=10)
+
+            rospy.wait_for_message(pose_topic_name, PoseStamped, timeout=10.0)
+
+        rospy.wait_for_message("/clock", Clock, timeout=5.0)  # Wait for first update of clock
         busy_waiting_start = rospy.Time.now()
+        print("Start %s at %.2f" % (aut, busy_waiting_start.to_sec()))
         while not stop_ev.is_set() and not aut.reached_sink_state():
             sleep(0.0)  # Yield to other threads
             # TODO avoid each iteration of while loop running indefinitely long
@@ -97,9 +110,10 @@ def run_as_process(aut: AutomatonBase, conn: Connection,
             if act is not None:
                 busy_waiting_start = rospy.Time.now()
             else:
-                if rospy.Time.now() - busy_waiting_start > rospy.Duration(secs=2):
-                    print("Busy waiting for over two seconds. ", end='')
-                    stop_ev.set()
+                timeout = 30
+                if busy_waiting_start + rospy.Duration(secs=timeout) < rospy.Time.now():
+                    print("Busy waiting for over %d seconds without new actions." % timeout, end=' ')
+                    break
                 continue
 
             # Send output action to the environment
@@ -110,9 +124,10 @@ def run_as_process(aut: AutomatonBase, conn: Connection,
             aut.transition(act)
 
     except KeyboardInterrupt:
-        print("KeyboardInterrupt.")
-    except RuntimeError as e:
-        print(repr(e))
+        print("KeyboardInterrupt.", end=' ')
+    # except RuntimeError as e:
+    #    print(repr(e), end=' ')
     finally:
-        print("Ending " + str(aut) + "...")
+        print("Ending %s at %.2f..." % (aut, rospy.Time.now().to_sec()))
+        rospy.signal_shutdown("Shutting down ROS node for %s" % aut)
         conn.close()
