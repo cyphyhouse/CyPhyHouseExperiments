@@ -7,10 +7,12 @@ from reachtube.rect_set_impl._boxes_map import Map
 import rospy
 from geometry_msgs.msg import PoseStamped, Point, Pose, Vector3
 from cym_marker.msg import Marker, Material, Script
+from std_msgs.msg import ColorRGBA
 
 
 import sys
 import copy
+import time
 import random
 import math as m
 import numpy as np
@@ -28,7 +30,7 @@ class Follow_points(AgentThread):
     def __init__(self, config, motion_config):
         super(Follow_points, self).__init__(config, motion_config)
 
-
+        self.startTime = time.time()
         with open('/home/hdt2/Desktop/obsPts.data.yaml', 'r') as filehandle:
             self.obsPts = yaml.safe_load(filehandle)
         with open('/home/hdt2/Desktop/walls.data.yaml', 'r') as filehandle:
@@ -43,6 +45,52 @@ class Follow_points(AgentThread):
         self.locals['tries'] = 1
         self.locals['p'] = 10 - 3 * self.pid()
 
+        mat1 = Material()
+        mat2 = Material()
+        mat3 = Material()
+
+        ambient = ColorRGBA()
+        diffuse = ColorRGBA()
+        specular = ColorRGBA()
+        emissive = ColorRGBA()
+
+        ambient.r = .5
+        ambient.g = .75
+        ambient.g = 0
+        ambient.a = 1
+
+        diffuse.r = .7
+        diffuse.g = .9
+        diffuse.g = 0
+        diffuse.a = 1
+
+        specular.r = .2
+        specular.g = .2
+        specular.g = 2
+        specular.a = 64
+
+        emissive.r = .1
+        emissive.g = 0
+        emissive.g = .1
+        emissive.a = 1
+
+
+        mat1.ambient = ambient
+        mat1.diffuse = diffuse
+        mat1.specular = specular
+        mat1.emissive = emissive
+
+        mat2.ambient = ambient
+        mat2.diffuse = diffuse
+        mat2.specular = specular
+        mat2.emissive = emissive
+
+        mat3.ambient = ambient
+        mat3.diffuse = diffuse
+        mat3.specular = specular
+        mat3.emissive = emissive
+
+        self.markerColors = [mat1, mat2, mat3]
 
         self.waypoints = [[(20,14,3), (23,0,3), (16,-16,3)],
                           [(14.5,-16,3), (26,0,3), (20,14,3)],
@@ -62,6 +110,7 @@ class Follow_points(AgentThread):
 
     def loop_body(self):
         if self.locals['tries'] == 1:
+            #self.timeToNextPt = time.time()
             x = self.locals[self.pid()][self.waypoint_num][0]
             y = self.locals[self.pid()][self.waypoint_num][1]
             z = self.locals[self.pid()][self.waypoint_num][2]
@@ -75,12 +124,13 @@ class Follow_points(AgentThread):
             self.val = (self.visualizeTube(rtube))
 
 
-
+            self.texecStart = time.time()
             self.write_to_actuator('Motion.target', self.pos3d(x, y, z))
             self.locals['tries'] += 1
             self.waypoint_num += 1
             return
         if self.locals['tries'] <= len(self.waypoints[self.pid()]) and  self.read_from_sensor('Motion.reached'):
+            print(self.pid(), "reached waypoint", self.waypoint_num, time.time()-self.texecStart)
             self.deleteTubes(self.val)
             self.pub_marker.publish(self.factory_marker(i=((self.pid()+1)*10000)+self.locals['tries'],pos_x=self.waypoints[self.pid()][self.waypoint_num-1][0], pos_y=self.waypoints[self.pid()][self.waypoint_num-1][1], pos_z=self.waypoints[self.pid()][self.waypoint_num-1][2], type=2, color=1))
 
@@ -96,15 +146,18 @@ class Follow_points(AgentThread):
 
             self.val = (self.visualizeTube(rtube))
 
+            self.texecStart = time.time()
             self.write_to_actuator('Motion.target', self.pos3d(x, y, z))
             self.locals['tries'] += 1
             self.waypoint_num += 1
             return
         if self.locals['tries'] == len(self.waypoints[self.pid()])+1 and self.read_from_sensor('Motion.reached'):
+            print(self.pid(), "reached waypoint", self.waypoint_num, time.time()-self.texecStart)
             self.pub_marker.publish(self.factory_marker(i=((self.pid()+1)*10000)+self.locals['tries'],pos_x=self.waypoints[self.pid()][self.waypoint_num-1][0], pos_y=self.waypoints[self.pid()][self.waypoint_num-1][1], pos_z=self.waypoints[self.pid()][self.waypoint_num-1][2], type=2, color=1))
 
             self.deleteTubes(self.val)
             self.trystop()
+            print("Total Time", self.pid(), time.time()-self.startTime)
             return
 
     #function to convert a reachtube to a map type
@@ -116,6 +169,7 @@ class Follow_points(AgentThread):
 
 
     def getTube(self, x, y, z, initX, initY, initZ):
+        start = time.time()
         trace = tc_simulate([x, y, z], [initX, initY, initZ, 0,0,0,0,0,0], 50)
         goal = [15, 23, 2.5]
         dimensions = len(trace[0])
@@ -123,6 +177,7 @@ class Follow_points(AgentThread):
         gamma = [0] * (dimensions - 1)
         init_delta_array = [0.5,0.5,0.5] + [0.1] * (dimensions - 4)
         rtube = bloat_to_tube(init_delta_array, trace, dimensions, goal)
+        print("Reachtube/bloting for", self.pid(), time.time()-start)
         return rtube
 
 
@@ -159,11 +214,12 @@ class Follow_points(AgentThread):
         PREDEFINED_SCRIPT = [
            "Gazebo/RedTransparent",
            "Gazebo/GreenTransparent",
+           "Gazebo/OrangeTransparent",
+           "Gazebo/YellowTransparent",
+           "Gazebo/GreyTransparent",
            "Gazebo/BlueTransparent",
            "Gazebo/DarkMagentaTransparent",
-           "Gazebo/GreyTransparent",
            "Gazebo/BlackTransparent",
-           "Gazebo/YellowTransparent",
         ]
         return Script(name=PREDEFINED_SCRIPT[i])
 
@@ -193,6 +249,7 @@ class Follow_points(AgentThread):
         ]
 
         mat = Material(script=self.factory_script(color))
+        #mat = self.markerColors[self.pid()]
 
         marker = Marker()
         marker.header.frame_id = "world"
@@ -222,9 +279,11 @@ class Follow_points(AgentThread):
         #obsToCheck = self.findPotentialObstacles(rtube)
         #collisions = self.checkCollisions(obsToCheck, rtube)
         tube = Map(self.convertTubeToMap(rtube))
+        start = time.time()
         obsToCheck = self.findPotentialObstacles(tube.obstacles)
         potObs = Map(obsToCheck)
         collisions = tube.find_overlapping_rectangles(potObs)
+        print("Determine Obstacles for", self.pid(), time.time()-start)
 
         for i in range(0,len(tube.obstacles)):
             rect1 = tube.obstacles[i][0]
