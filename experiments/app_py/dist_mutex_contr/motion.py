@@ -66,12 +66,20 @@ class MotionHectorQuad:
 
     @staticmethod
     def _send_action_and_wait(action_client: SimpleActionClient,
-                              goal, timeout: rospy.Duration) -> bool:
-        deadline = rospy.Time.now() + timeout
-        if not action_client.wait_for_server(timeout=deadline - rospy.Time.now()):
-            # Action server is not available
-            return False
-        assert action_client.simple_state == SimpleGoalState.DONE
-        status = action_client.send_goal_and_wait(
-            goal=goal, execute_timeout=deadline - rospy.Time.now())
+                              goal, timeout: rospy.Duration = rospy.Duration()) -> bool:
+        if timeout == rospy.Duration():
+            if not action_client.wait_for_server():
+                # Action server is not available
+                return False
+            assert action_client.simple_state == SimpleGoalState.DONE
+            status = action_client.send_goal_and_wait(goal=goal)
+        else:
+            deadline = rospy.Time.now() + timeout
+            if not action_client.wait_for_server(timeout=deadline - rospy.Time.now()):
+                # Action server is not available
+                return False
+            assert action_client.simple_state == SimpleGoalState.DONE
+            status = action_client.send_goal_and_wait(
+                goal=goal, execute_timeout=deadline - rospy.Time.now())
+
         return status == GoalStatus.SUCCEEDED
