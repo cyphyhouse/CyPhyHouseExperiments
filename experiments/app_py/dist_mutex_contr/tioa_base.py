@@ -1,10 +1,12 @@
 import abc
+from collections import Counter
 from multiprocessing.synchronize import Event
 from multiprocessing.connection import Connection
 from typing import Any, Dict, List, Optional, Tuple
 
 # TODO avoid importing rospy if not using ROS
 from geometry_msgs.msg import PoseStamped
+from reachtube import Contract
 from rosgraph_msgs.msg import Clock
 import rospy
 from rospy.timer import sleep
@@ -15,6 +17,7 @@ Action = Tuple[str, Dict[str, Any]]
 class AutomatonBase(abc.ABC):
     def __init__(self):
         self.__clk = rospy.Time(0, 0)  # Not exposed to child classes
+        self.queries = Counter({"m": 0, "e": 0})
 
     def __repr__(self) -> str:
         return self.__class__.__name__
@@ -59,6 +62,18 @@ class AutomatonBase(abc.ABC):
     @abc.abstractmethod
     def _enabled_actions(self) -> List[Action]:
         raise NotImplementedError
+
+    def _membership_query(self, item, contr: Contract) -> bool:
+        self.queries["m"] += 1
+        return item in contr
+
+    def _subset_query(self, c1: Contract, c2: Contract) -> bool:
+        self.queries["e"] += 1
+        return c1 <= c2
+
+    def _disjoint_query(self, c1: Contract, c2: Contract) -> bool:
+        self.queries['e'] += 1
+        return c1.isdisjoint(c2)
 
 
 def _select_act(aut: AutomatonBase, conn: Connection) -> Optional[Action]:
@@ -128,6 +143,10 @@ def run_as_process(aut: AutomatonBase, conn: Connection,
     # except RuntimeError as e:
     #    print(repr(e), end=' ')
     finally:
+        if isinstance(aut, Agent):
+            if not aut.motion.landing():
+                print("Landing failed.")
+        print("Query %s" % str(aut.queries))
         print("Ending %s at %.2f..." % (aut, rospy.Time.now().to_sec()))
         rospy.signal_shutdown("Shutting down ROS node for %s" % aut)
         conn.close()

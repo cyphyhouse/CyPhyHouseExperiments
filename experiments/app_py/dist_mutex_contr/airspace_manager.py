@@ -39,8 +39,8 @@ class AirspaceManager(AutomatonBase):
 
         if act[0] == "request":
             self._eff_request(**act[1])
-            if not self.invariant():
-                print("Invariant is violated")
+            # if not self.invariant():
+            #    print("Invariant is violated")
         elif act[0] == "reply":
             self._eff_reply(**act[1])
         elif act[0] == "release":
@@ -52,7 +52,7 @@ class AirspaceManager(AutomatonBase):
 
     def _eff_request(self, uid: Hashable, target: Contract) -> None:
         self._reply_set.add(uid)
-        if all(target.isdisjoint(v) for k, v in self._contr_dict.items() if k != uid):
+        if all(self._disjoint_query(target, v) for k, v in self._contr_dict.items() if k != uid):
             self._contr_dict[uid] |= target
 
     def _eff_reply(self, uid: Hashable, acquired: Contract) -> None:
@@ -65,7 +65,7 @@ class AirspaceManager(AutomatonBase):
         return bool(self._contr_dict) and self.clk >= self.__deadline
 
     def _eff_marker(self):
-        self.__deadline = self.clk + rospy.Duration(nsecs=2)
+        self.__deadline = self.clk + rospy.Duration.from_sec(0.5)
 
         msg = self._build_diag_msg()
         self.__pub_diag.publish(msg)
