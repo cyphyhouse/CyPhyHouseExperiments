@@ -1,3 +1,4 @@
+from copy import deepcopy
 from enum import Enum
 from typing import Any, Callable, Hashable, List, NamedTuple, Optional, Tuple
 
@@ -5,7 +6,7 @@ import rospy  # FIXME avoid rospy
 
 import numpy as np
 from reachtube.drone3d_types import Contract
-from scipy.spatial import Rectangle
+from scipy.spatial import Rectangle, distance
 
 from .motion import MotionHectorQuad
 from .tioa_base import Action, AutomatonBase
@@ -28,22 +29,12 @@ class Agent(AutomatonBase):
         RELEASING = 5
         STOPPING = 6
 
-    def __init__(self, uid: Hashable, motion: MotionHectorQuad):
+    def __init__(self, uid: Hashable, motion: MotionHectorQuad, waypoints: List):
         super(Agent, self).__init__()
 
         self.__uid = uid  # Set it as private to avoid being modified
         self.__motion = motion
-
-        if self.uid == "drone0":
-            self.__way_points = [(0, 0, 1), (2, 0, 1), (4, 0, 1), (6, 0, 1)]
-        elif self.uid == "drone1":
-            self.__way_points = [(0, 0, 1), (0, 2, 1), (0, 4, 1), (0, 6, 1)]
-        elif self.uid == "drone2":
-            self.__way_points = [(0, 0, 1), (-2, 0, 1), (-4, 0, 1), (-6, 0, 1)]
-        elif self.uid == "drone3":
-            self.__way_points = [(0, 0, 1), (0, -2, 1), (0, -4, 1), (0, -6, 1)]
-        else:
-            self.__way_points = []  # type: List[Tuple[float, float, float]]
+        self.__way_points = deepcopy(waypoints)
 
         self._status = Agent.Status.IDLE
         self._plan = []  # type: List[StampedRect]
@@ -125,13 +116,13 @@ class Agent(AutomatonBase):
 
     def _eff_plan(self) -> None:
         if self.__way_points:
-            rect_list = _bloat_path(self._position,
-                                    self.__way_points)
-            self._plan = [StampedRect(self.clk.to_sec() + 5*i, rect)
-                          for i, rect in enumerate(rect_list)]
+            self._plan = waypoints_to_plan(self.clk.to_sec(), self._position, self.__way_points)
             self._plan_contr = Contract.from_stamped_rectangles(
                 self._plan)
             self._status = Agent.Status.REQUESTING
+        else:
+            self.__motion.landing()
+            self._status = Agent.Status.STOPPING
 
     def _pre_request(self, uid: Hashable, target: Contract) -> bool:
         return self._status == Agent.Status.REQUESTING \
@@ -142,17 +133,17 @@ class Agent(AutomatonBase):
 
     def _eff_reply(self, uid: Hashable, acquired: Contract) -> None:
         if self._status == Agent.Status.WAITING:
-            if not (self._curr_contr <= acquired):
+            if not self._subset_query(self._curr_contr, acquired):
                 raise RuntimeError("Current contract is not a subset of acquired contract.\n"
                                    "Current: %s\nAcquired: %s" % (repr(self._curr_contr), repr(acquired)))
-            if self._plan_contr <= acquired:  # and self._curr_contr <= acquired
+            if self._subset_query(self._plan_contr, acquired):  # and self._curr_contr <= acquired
                 # Acquired enough contract to execute plan
                 self._curr_contr = acquired
-                tgt = self.__way_points[len(self.__way_points) + 1 - len(self._plan)]
+                self._status = Agent.Status.MOVING
+
+                tgt = self.__way_points.pop(0)
                 print("%s going to %s." % (self, str(tgt)))
                 self._target = tgt
-
-                self._status = Agent.Status.MOVING
             else:
                 # Not enough contract for the plan. Keep only current contracts
                 self._free_contr = acquired - self._curr_contr
@@ -169,16 +160,15 @@ class Agent(AutomatonBase):
         self._plan.pop(0)
         self._plan_contr = Contract.from_stamped_rectangles(self._plan)
 
-        if len(self._plan) >= 2:
-            idx = len(self.__way_points) + 1 - len(self._plan)
-            assert 0 <= idx < len(self.__way_points)
-            tgt = self.__way_points[idx]
+        if self.__way_points:
+            tgt = self.__way_points.pop(0)
             print("%s going to %s." % (self, str(tgt)))
             self._target = tgt
 
     def _pre_succeed(self) -> bool:
         return self._status == Agent.Status.MOVING and len(self._plan) == 1 \
-            and StampedPoint(self.clk.to_sec(), self._position) in self._plan_contr
+            and self._membership_query(StampedPoint(self.clk.to_sec(), self._position),
+                                       self._plan_contr)
 
     def _eff_succeed(self) -> None:
         self._free_contr = self._curr_contr - self._plan_contr
@@ -188,7 +178,8 @@ class Agent(AutomatonBase):
     def _pre_fail(self) -> bool:
         return self._status == Agent.Status.MOVING \
             and not self._failure_reported \
-            and StampedPoint(self.clk.to_sec(), self._position) not in self._plan_contr
+            and not self._membership_query(StampedPoint(self.clk.to_sec(), self._position),
+                                           self._plan_contr)
 
     def _eff_fail(self) -> None:
         rospy.logerr("Failed to follow the plan contract. (%.2f, %s) not in %s."
@@ -205,7 +196,7 @@ class Agent(AutomatonBase):
         self._status = Agent.Status.IDLE
         self._curr_contr -= releasable
 
-        self._retry_time = self.clk + rospy.Duration(secs=2)  # Wait for a while before next plan
+        self._retry_time = self.clk + rospy.Duration.from_sec(1.0)  # Wait for a while before next plan
 
     def reached_sink_state(self) -> bool:
         return self._status == Agent.Status.STOPPING
@@ -232,7 +223,17 @@ class Agent(AutomatonBase):
         self._position = self.__motion.position
 
 
-BLOAT_WIDTH = 0.75
+BLOAT_WIDTH = 0.5
+
+
+def waypoints_to_plan(clk: float, pos, way_points) -> List[StampedRect]:
+    rect_list = _bloat_path(pos, way_points)
+    deadline = clk
+    ret = []
+    for rect in rect_list:
+        ret.append(StampedRect(deadline, rect))
+        deadline = deadline + 0.5*float(distance.euclidean(rect.maxes, rect.mins))
+    return ret
 
 
 def _bloat_point(p: Tuple[float, float, float]) -> Rectangle:
