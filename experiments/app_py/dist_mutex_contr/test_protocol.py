@@ -94,21 +94,28 @@ def _multicast(conn_seq: Sequence[connection.Connection]) -> Sequence[bytes]:
 
 def test_protocol(scenario) -> None:
     stop_ev = Event()
-
-    aut_list = [AirspaceManager()]  # type: List[AutomatonBase]
-
-    aut_list.extend(Agent(uid, MotionHectorQuad(uid), wps)
-                    for uid, wps in scenario.items())
-
-    proc_list = []  # type: List[Process]
     channel_conn_list = []  # type: List[connection.Connection]
-    for aut in aut_list:
+
+    air_mgr = AirspaceManager()
+    channel_conn, air_mgr_conn = Pipe()
+    channel_conn_list.append(channel_conn)
+    air_mgr_proc = Process(target=run_as_process,
+                           kwargs={"aut": air_mgr,
+                                   "conn": air_mgr_conn,
+                                   "stop_ev": stop_ev})
+
+    agent_list = [Agent(uid, MotionHectorQuad(uid), wps)
+                  for uid, wps in scenario.items()]
+    agent_proc_list = []  # type: List[Process]
+    for aut in agent_list:
         channel_conn, aut_conn = Pipe()
         channel_conn_list.append(channel_conn)
-        proc_list.append(Process(target=run_as_process,
-                                 kwargs={"aut": aut,
-                                         "conn": aut_conn,
-                                         "stop_ev": stop_ev}))
+        agent_proc_list.append(Process(target=run_as_process,
+                                       kwargs={"aut": aut,
+                                               "conn": aut_conn,
+                                               "stop_ev": stop_ev}))
+
+    proc_list = [air_mgr_proc] + agent_proc_list
 
     act_list = []  # type: List[bytes]
     try:
@@ -116,14 +123,14 @@ def test_protocol(scenario) -> None:
             proc.start()
             while not proc.is_alive():
                 pass
-
-        while any(proc.is_alive() for proc in proc_list):
+        # Stay active if any agent is alive
+        while any(agent_proc.is_alive() for agent_proc in agent_proc_list):
             # Multicast messages
             sent_act_list = _multicast(channel_conn_list)
             act_list.extend(sent_act_list)
     finally:
         print("Sending stop event...")
-        stop_ev.set()  # Stop all automatons
+        stop_ev.set()  # Stop all automatons especially AirspaceManager
         for proc in proc_list:
             proc.join(2)
         for proc in proc_list:
