@@ -142,7 +142,7 @@ class Agent(AutomatonBase):
                 self._status = Agent.Status.MOVING
 
                 tgt = self.__way_points.pop(0)
-                print("%s going to %s." % (self, str(tgt)))
+                rospy.logdebug("%s going to %s." % (self, str(tgt)))
                 self._target = tgt
             else:
                 # Not enough contract for the plan. Keep only current contracts
@@ -162,7 +162,7 @@ class Agent(AutomatonBase):
 
         if self.__way_points:
             tgt = self.__way_points.pop(0)
-            print("%s going to %s." % (self, str(tgt)))
+            rospy.logdebug("%s going to %s." % (self, str(tgt)))
             self._target = tgt
 
     def _pre_succeed(self) -> bool:
@@ -173,7 +173,7 @@ class Agent(AutomatonBase):
     def _eff_succeed(self) -> None:
         self._free_contr = self._curr_contr - self._plan_contr
         self._status = Agent.Status.RELEASING
-        print("Agent %s succeeded" % str(self.__uid))
+        rospy.logdebug("Agent %s succeeded" % str(self.__uid))
 
     def _pre_fail(self) -> bool:
         return self._status == Agent.Status.MOVING \
