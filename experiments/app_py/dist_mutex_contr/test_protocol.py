@@ -129,7 +129,6 @@ def test_protocol(scenario) -> None:
             sent_act_list = _multicast(channel_conn_list)
             act_list.extend(sent_act_list)
     finally:
-        print("Sending stop event...")
         stop_ev.set()  # Stop all automatons especially AirspaceManager
         for proc in proc_list:
             proc.join(2)
