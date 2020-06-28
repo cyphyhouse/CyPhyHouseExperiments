@@ -17,7 +17,7 @@ Action = Tuple[str, Dict[str, Any]]
 class AutomatonBase(abc.ABC):
     def __init__(self):
         self.__clk = rospy.Time(0, 0)  # Not exposed to child classes
-        self.queries = Counter({"m": 0, "e": 0})
+        self.queries = Counter()
 
     def __repr__(self) -> str:
         return self.__class__.__name__
@@ -64,16 +64,21 @@ class AutomatonBase(abc.ABC):
         raise NotImplementedError
 
     def _membership_query(self, item, contr: Contract) -> bool:
-        self.queries["m"] += 1
+        self.queries["Qm"] += 1
+        self.queries["R(Qm)"] += contr.num_rects()
         return item in contr
 
     def _subset_query(self, c1: Contract, c2: Contract) -> bool:
-        self.queries["e"] += 1
-        return c1 <= c2
+        self.queries["Qe"] += 1
+        c3 = c1 - c2
+        self.queries["R(Qe)"] += c3.num_rects()
+        return c3.isempty()
 
     def _disjoint_query(self, c1: Contract, c2: Contract) -> bool:
-        self.queries['e'] += 1
-        return c1.isdisjoint(c2)
+        self.queries['Qe'] += 1
+        c3 = c1 & c2
+        self.queries["R(Qe)"] += c3.num_rects()
+        return c3.isempty()
 
 
 def _select_act(aut: AutomatonBase, conn: Connection) -> Optional[Action]:
@@ -150,6 +155,6 @@ def run_as_process(aut: AutomatonBase, conn: Connection,
                 print("Landing failed.")
         end_time = rospy.Time.now().to_sec()
         rospy.logdebug("Ending %s at %.2f..." % (aut, end_time))
-        print({"name": repr(aut), "start_time": start_time, "end_time": end_time, "queries": aut.queries})
+        print('-', {"name": repr(aut), "t_start": start_time, "t_end": end_time, **aut.queries})
         rospy.signal_shutdown("Shutting down ROS node for %s" % aut)
         conn.close()

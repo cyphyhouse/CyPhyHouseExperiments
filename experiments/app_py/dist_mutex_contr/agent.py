@@ -129,6 +129,8 @@ class Agent(AutomatonBase):
             and target == self._plan_contr
 
     def _eff_request(self, uid: Hashable, target: Contract) -> None:
+        self.queries["Req"] += 1
+        self.queries["R(Req)"] += target.num_rects()
         self._status = Agent.Status.WAITING
 
     def _eff_reply(self, uid: Hashable, acquired: Contract) -> None:
