@@ -1,3 +1,4 @@
+from collections import Counter
 from multiprocessing import connection, Event, Pipe, Process
 from typing import List, Sequence
 
@@ -8,6 +9,7 @@ from .airspace_manager import AirspaceManager
 from .agent import Agent
 from .motion import MotionHectorQuad
 from .tioa_base import AutomatonBase, run_as_process
+from .. import eceb_scenarios
 
 
 def test_agent() -> None:
@@ -90,23 +92,30 @@ def _multicast(conn_seq: Sequence[connection.Connection]) -> Sequence[bytes]:
     return act_list
 
 
-def test_protocol(num_agents: int = 5) -> None:
+def test_protocol(scenario) -> None:
     stop_ev = Event()
-
-    aut_list = [AirspaceManager()]  # type: List[AutomatonBase]
-
-    aut_list.extend(Agent(uid, MotionHectorQuad(uid))
-                    for uid in ("drone" + str(i) for i in range(num_agents)))
-
-    proc_list = []  # type: List[Process]
     channel_conn_list = []  # type: List[connection.Connection]
-    for aut in aut_list:
+
+    air_mgr = AirspaceManager()
+    channel_conn, air_mgr_conn = Pipe()
+    channel_conn_list.append(channel_conn)
+    air_mgr_proc = Process(target=run_as_process,
+                           kwargs={"aut": air_mgr,
+                                   "conn": air_mgr_conn,
+                                   "stop_ev": stop_ev})
+
+    agent_list = [Agent(uid, MotionHectorQuad(uid), wps)
+                  for uid, wps in scenario.items()]
+    agent_proc_list = []  # type: List[Process]
+    for aut in agent_list:
         channel_conn, aut_conn = Pipe()
         channel_conn_list.append(channel_conn)
-        proc_list.append(Process(target=run_as_process,
-                                 kwargs={"aut": aut,
-                                         "conn": aut_conn,
-                                         "stop_ev": stop_ev}))
+        agent_proc_list.append(Process(target=run_as_process,
+                                       kwargs={"aut": aut,
+                                               "conn": aut_conn,
+                                               "stop_ev": stop_ev}))
+
+    proc_list = [air_mgr_proc] + agent_proc_list
 
     act_list = []  # type: List[bytes]
     try:
@@ -114,14 +123,14 @@ def test_protocol(num_agents: int = 5) -> None:
             proc.start()
             while not proc.is_alive():
                 pass
-
-        while len(act_list) < 1000 and not stop_ev.is_set():
+        # Stay active if any agent is alive
+        while any(agent_proc.is_alive() for agent_proc in agent_proc_list):
             # Multicast messages
             sent_act_list = _multicast(channel_conn_list)
             act_list.extend(sent_act_list)
     finally:
         print("Sending stop event...")
-        stop_ev.set()  # Stop all automatons
+        stop_ev.set()  # Stop all automatons especially AirspaceManager
         for proc in proc_list:
             proc.join(2)
         for proc in proc_list:
@@ -136,7 +145,7 @@ def test_protocol(num_agents: int = 5) -> None:
         print("Total actions: %d, Requests: %d, Replies: %d, Releases: %d" %
               (len(act_list),
                sum(act[0] == "request" for act in act_list),
-               sum(act[0] == "request" for act in act_list),
+               sum(act[0] == "reply" for act in act_list),
                sum(act[0] == "release" for act in act_list)))
 
 
@@ -145,7 +154,7 @@ if __name__ == "__main__":
         # TODO make them individual test files
         # test_agent()
         # test_contract_manager()
-        test_protocol(num_agents=3)
+        test_protocol(eceb_scenarios.BUSY_CORRIDOR)
     except KeyboardInterrupt:
         print("KeyboardInterrupt.")
     finally:

@@ -1,10 +1,12 @@
 import abc
+from collections import Counter
 from multiprocessing.synchronize import Event
 from multiprocessing.connection import Connection
 from typing import Any, Dict, List, Optional, Tuple
 
 # TODO avoid importing rospy if not using ROS
 from geometry_msgs.msg import PoseStamped
+from reachtube import Contract
 from rosgraph_msgs.msg import Clock
 import rospy
 from rospy.timer import sleep
@@ -15,6 +17,7 @@ Action = Tuple[str, Dict[str, Any]]
 class AutomatonBase(abc.ABC):
     def __init__(self):
         self.__clk = rospy.Time(0, 0)  # Not exposed to child classes
+        self.queries = Counter({"m": 0, "e": 0})
 
     def __repr__(self) -> str:
         return self.__class__.__name__
@@ -60,6 +63,18 @@ class AutomatonBase(abc.ABC):
     def _enabled_actions(self) -> List[Action]:
         raise NotImplementedError
 
+    def _membership_query(self, item, contr: Contract) -> bool:
+        self.queries["m"] += 1
+        return item in contr
+
+    def _subset_query(self, c1: Contract, c2: Contract) -> bool:
+        self.queries["e"] += 1
+        return c1 <= c2
+
+    def _disjoint_query(self, c1: Contract, c2: Contract) -> bool:
+        self.queries['e'] += 1
+        return c1.isdisjoint(c2)
+
 
 def _select_act(aut: AutomatonBase, conn: Connection) -> Optional[Action]:
     # TODO fairness
@@ -78,6 +93,7 @@ def _select_act(aut: AutomatonBase, conn: Connection) -> Optional[Action]:
 def run_as_process(aut: AutomatonBase, conn: Connection,
                    stop_ev: Event, **kwargs: Any) -> None:
     """ NOTE: Must be executed in the main thread of a process """
+    start_time = float("NaN")
     try:
         rospy.init_node(repr(aut), anonymous=True, disable_signals=False)
         # Initialize Publishers and Subscribers
@@ -97,7 +113,8 @@ def run_as_process(aut: AutomatonBase, conn: Connection,
 
         rospy.wait_for_message("/clock", Clock, timeout=5.0)  # Wait for first update of clock
         busy_waiting_start = rospy.Time.now()
-        print("Start %s at %.2f" % (aut, busy_waiting_start.to_sec()))
+        start_time = busy_waiting_start.to_sec()
+        rospy.logdebug("Start %s at %.2f" % (aut, busy_waiting_start.to_sec()))
         while not stop_ev.is_set() and not aut.reached_sink_state():
             sleep(0.0)  # Yield to other threads
             # TODO avoid each iteration of while loop running indefinitely long
@@ -128,6 +145,11 @@ def run_as_process(aut: AutomatonBase, conn: Connection,
     # except RuntimeError as e:
     #    print(repr(e), end=' ')
     finally:
-        print("Ending %s at %.2f..." % (aut, rospy.Time.now().to_sec()))
+        if isinstance(aut, Agent):
+            if not aut.motion.landing():
+                print("Landing failed.")
+        end_time = rospy.Time.now().to_sec()
+        rospy.logdebug("Ending %s at %.2f..." % (aut, end_time))
+        print({"name": repr(aut), "start_time": start_time, "end_time": end_time, "queries": aut.queries})
         rospy.signal_shutdown("Shutting down ROS node for %s" % aut)
         conn.close()
