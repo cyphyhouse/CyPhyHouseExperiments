@@ -27,6 +27,7 @@ def gen_row(res_list):
 if __name__ == "__main__":
     with open('busy_corridor.yaml', 'r') as f:
         ret_dict = safe_load(f)
-        for ret_list in ret_dict.values():
+        for key, ret_list in sorted(ret_dict.items()):
+            print("\nDate: %s" % str(key))
             print("%d &  %.2f &  %.2f &  %.2f &  %d &  %.2f &  %d &  %.2f &  %d &  %.2f"
                   % gen_row(ret_list))
