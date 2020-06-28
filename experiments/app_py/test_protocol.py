@@ -1,6 +1,6 @@
 import datetime
-from multiprocessing import connection, Event, Pipe, Process
-from typing import List, Sequence
+from multiprocessing import Event, Pipe, Process, Queue
+from typing import List, Sequence, Tuple
 
 from reachtube import Contract
 from scipy.spatial import Rectangle
@@ -78,41 +78,46 @@ def test_contract_manager() -> None:
         manager_conn.close()
 
 
-def _multicast(conn_seq: Sequence[connection.Connection]) -> Sequence[bytes]:
+def _multicast(mgr_queue_pair, agent_queue_list: List[Tuple[Queue, Queue]]) -> Sequence[bytes]:
     act_list = []
-    conn_w_msg_list = connection.wait(conn_seq, timeout=0.0)
+    mgr_i_q, mgr_o_q = mgr_queue_pair
+    o_queue_w_msg_list = [o_q for _, o_q in agent_queue_list if not o_q.empty()]  # type: List[Queue]
     # TODO deliver messages only to automatons using the actions
-    for conn_w_msg in conn_w_msg_list:
-        assert isinstance(conn_w_msg, connection.Connection)
-        act = conn_w_msg.recv()
+    for o_q in o_queue_w_msg_list:
+        act = o_q.get_nowait()
         act_list.append(act)
-        for conn in conn_seq:
-            if conn != conn_w_msg:
-                conn.send(act)
+        mgr_i_q.put(act)
+
+    if not mgr_o_q.empty():
+        act = mgr_o_q.get_nowait()
+        act_list.append(act)
+        for i_q, _ in agent_queue_list:
+            i_q.put(act)
     return act_list
 
 
 def test_protocol(scenario) -> None:
     stop_ev = Event()
-    channel_conn_list = []  # type: List[connection.Connection]
 
     air_mgr = AirspaceManager()
-    channel_conn, air_mgr_conn = Pipe()
-    channel_conn_list.append(channel_conn)
+    air_mgr_i_queue, air_mgr_o_queue = Queue(), Queue()
     air_mgr_proc = Process(target=run_as_process,
                            kwargs={"aut": air_mgr,
-                                   "conn": air_mgr_conn,
+                                   "i_queue": air_mgr_i_queue,
+                                   "o_queue": air_mgr_o_queue,
                                    "stop_ev": stop_ev})
 
     agent_list = [Agent(uid, MotionHectorQuad(uid), wps)
                   for uid, wps in scenario.items()]
     agent_proc_list = []  # type: List[Process]
+    agent_queue_list = []  # type: List[Tuple[Queue, Queue]]
     for aut in agent_list:
-        channel_conn, aut_conn = Pipe()
-        channel_conn_list.append(channel_conn)
+        aut_i_queue, aut_o_queue = Queue(), Queue()
+        agent_queue_list.append((aut_i_queue, aut_o_queue))
         agent_proc_list.append(Process(target=run_as_process,
                                        kwargs={"aut": aut,
-                                               "conn": aut_conn,
+                                               "i_queue": aut_i_queue,
+                                               "o_queue": aut_o_queue,
                                                "stop_ev": stop_ev}))
 
     proc_list = [air_mgr_proc] + agent_proc_list
@@ -126,7 +131,8 @@ def test_protocol(scenario) -> None:
         # Stay active if any agent is alive
         while any(agent_proc.is_alive() for agent_proc in agent_proc_list):
             # Multicast messages
-            sent_act_list = _multicast(channel_conn_list)
+            sent_act_list = _multicast((air_mgr_i_queue, air_mgr_o_queue),
+                                       agent_queue_list)
             act_list.extend(sent_act_list)
     finally:
         stop_ev.set()  # Stop all automatons especially AirspaceManager
@@ -136,8 +142,11 @@ def test_protocol(scenario) -> None:
             if proc.is_alive():
                 print(proc.name, "is still alive. Escalate to SIGTERM")
                 proc.terminate()
-        for conn in channel_conn_list:
-            conn.close()
+        air_mgr_i_queue.close()
+        air_mgr_o_queue.close()
+        for i_q, o_q in agent_queue_list:
+            i_q.close()
+            o_q.close()
 
         print("========== Recorded Actions =========")
         # TODO More detailed statistics
@@ -153,7 +162,8 @@ if __name__ == "__main__":
         # TODO make them individual test files
         # test_agent()
         # test_contract_manager()
-        subset = eceb_scenarios.BUSY_CORRIDOR.keys()  # ["drone0", "drone3"]
+        subset = eceb_scenarios.BUSY_CORRIDOR.keys()
+        # subset = ["drone" + str(2*i+1) for i in range(5)]
         sc = {key: val for key, val in eceb_scenarios.BUSY_CORRIDOR.items()
               if key in subset}
         print(datetime.datetime.now().replace(microsecond=0).isoformat(), ':')

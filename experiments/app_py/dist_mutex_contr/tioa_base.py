@@ -1,7 +1,7 @@
 import abc
 from collections import Counter
+from multiprocessing import Queue
 from multiprocessing.synchronize import Event
-from multiprocessing.connection import Connection
 from typing import Any, Dict, List, Optional, Tuple
 
 # TODO avoid importing rospy if not using ROS
@@ -81,11 +81,11 @@ class AutomatonBase(abc.ABC):
         return c3.isempty()
 
 
-def _select_act(aut: AutomatonBase, conn: Connection) -> Optional[Action]:
+def _select_act(aut: AutomatonBase, i_queue: Queue) -> Optional[Action]:
     # TODO fairness
     # Check for input actions first
-    while conn.poll():
-        act = conn.recv()  # type: Action
+    while not i_queue.empty():
+        act = i_queue.get()  # type: Action
         if aut.is_input(act):
             return act
     # No input action received. Select output or internal actions
@@ -95,7 +95,7 @@ def _select_act(aut: AutomatonBase, conn: Connection) -> Optional[Action]:
     return act_list.pop()
 
 
-def run_as_process(aut: AutomatonBase, conn: Connection,
+def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
                    stop_ev: Event, **kwargs: Any) -> None:
     """ NOTE: Must be executed in the main thread of a process """
     start_time = float("NaN")
@@ -125,7 +125,7 @@ def run_as_process(aut: AutomatonBase, conn: Connection,
             # TODO avoid each iteration of while loop running indefinitely long
 
             # Select an enabled action
-            act = _select_act(aut, conn)
+            act = _select_act(aut, i_queue)
 
             # No enabled action, stay at current discrete state
             # NOTE clock and continuous variables are still updated
@@ -140,7 +140,7 @@ def run_as_process(aut: AutomatonBase, conn: Connection,
 
             # Send output action to the environment
             if aut.is_output(act):
-                conn.send(act)
+                o_queue.put(act)
 
             # Run transition of automaton
             aut.transition(act)
@@ -157,4 +157,4 @@ def run_as_process(aut: AutomatonBase, conn: Connection,
         rospy.logdebug("Ending %s at %.2f..." % (aut, end_time))
         print('-', {"name": repr(aut), "t_start": start_time, "t_end": end_time, **aut.queries})
         rospy.signal_shutdown("Shutting down ROS node for %s" % aut)
-        conn.close()
+        o_queue.close()
