@@ -132,7 +132,7 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
             if act is not None:
                 busy_waiting_start = rospy.Time.now()
             else:
-                timeout = 30
+                timeout = 300
                 if busy_waiting_start + rospy.Duration(secs=timeout) < rospy.Time.now():
                     print("Busy waiting for over %d seconds without new actions." % timeout, end=' ')
                     break
@@ -157,4 +157,5 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
         rospy.logdebug("Ending %s at %.2f..." % (aut, end_time))
         print('-', {"name": repr(aut), "t_start": start_time, "t_end": end_time, **aut.queries})
         rospy.signal_shutdown("Shutting down ROS node for %s" % aut)
+        i_queue.close()
         o_queue.close()
