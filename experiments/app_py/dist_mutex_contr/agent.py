@@ -4,6 +4,7 @@ from typing import Any, Callable, Hashable, List, NamedTuple, Optional, Tuple
 
 import rospy  # FIXME avoid rospy
 
+import math
 import numpy as np
 from reachtube.drone3d_types import Contract
 from scipy.spatial import Rectangle, distance
@@ -234,13 +235,42 @@ BLOAT_WIDTH = 0.5
 
 
 def waypoints_to_plan(clk: float, pos, way_points) -> List[StampedRect]:
+    intermediate_pts, move_to_next_waypt = _fixedResolution(pos, way_points, resolution=2.5)
     rect_list = _bloat_path(pos, way_points)
+    move_to_next_waypt.append(True)                 #for the last contract
     deadline = clk
     ret = []
-    for rect in rect_list:
-        ret.append(StampedRect(deadline, rect, True))
-        deadline = deadline + 0.5*float(distance.euclidean(rect.maxes, rect.mins))
+    for rect, move_bool in zip(rect_list, move_to_next_waypt):
+        ret.append(StampedRect(deadline, rect, move_bool))
+        deadline = deadline + 0.25*float(distance.euclidean(rect.maxes, rect.mins))
     return ret
+
+def _fixedResolution(current_position, waypoints, resolution=1):
+    intermediate_pt_list = []
+    move_to_next_waypt = []
+    for waypoint in waypoints:
+        dist = (math.sqrt((current_position[0]-waypoint[0])**2 + (current_position[1]-waypoint[1])**2 + (current_position[2]-waypoint[2])**2))
+        num_intermediate_pts = math.ceil(dist/resolution)
+        direction_vector = np.asarray(waypoint) - np.asarray(current_position)
+        direction_vector_sign = (np.sign(direction_vector))
+        u = direction_vector / dist
+        intermediate_start_pt = np.asarray(current_position)
+        for i in range(0, num_intermediate_pts):
+            intermediate_end_pt = intermediate_start_pt + ((resolution) * u)
+            dist_to_waypt = (math.sqrt((intermediate_end_pt[0]-waypoint[0])**2 + (intermediate_end_pt[1]-waypoint[1])**2 + (intermediate_end_pt[2]-waypoint[2])**2))
+            distance = (math.sqrt((intermediate_end_pt[0]-intermediate_start_pt[0])**2 + (intermediate_end_pt[1]-intermediate_start_pt[1])**2 + (intermediate_end_pt[2]-intermediate_start_pt[2])**2))
+            vector_to_waypt_sign = np.sign(np.asarray(waypoint) - np.asarray(intermediate_end_pt))
+            if (direction_vector_sign[0] != vector_to_waypt_sign[0] or direction_vector_sign[1] != vector_to_waypt_sign[1] or direction_vector_sign[2] != vector_to_waypt_sign[2]):
+                intermediate_end_pt = np.asarray(waypoint)
+                distance = (math.sqrt((intermediate_end_pt[0]-intermediate_start_pt[0])**2 + (intermediate_end_pt[1]-intermediate_start_pt[1])**2 + (intermediate_end_pt[2]-intermediate_start_pt[2])**2))
+            intermediate_pt_list.append(tuple(intermediate_end_pt.tolist()))
+            intermediate_start_pt = intermediate_end_pt
+            if i == num_intermediate_pts-1:
+                move_to_next_waypt.append(True)
+            else:
+                move_to_next_waypt.append(False)
+        current_position = waypoint
+    return intermediate_pt_list, move_to_next_waypt
 
 
 def _bloat_point(p: Tuple[float, float, float]) -> Rectangle:
