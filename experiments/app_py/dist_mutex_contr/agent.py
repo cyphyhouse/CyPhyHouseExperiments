@@ -236,17 +236,19 @@ BLOAT_WIDTH = 0.5
 
 
 def waypoints_to_plan(clk: float, pos, way_points) -> List[StampedRect]:
-    intermediate_pts, move_to_next_waypt = _fixedResolution(pos, way_points, resolution=2.5)
-    rect_list = _bloat_path(pos, way_points)
-    move_to_next_waypt.append(True)                 #for the last contract
+    intermediate_pts, move_to_next_waypt = _fixed_resolution(pos, way_points, resolution=2.5)
+    rect_list = _bloat_path(pos, intermediate_pts)
+    #rect_list = _bloat_path(pos, way_points)                                   #COMMENT IN FOR DEFAULT METHOD
+    move_to_next_waypt.append(True)                                             #for the last contract
     deadline = clk
     ret = []
     for rect, move_bool in zip(rect_list, move_to_next_waypt):
         ret.append(StampedRect(deadline, rect, move_bool))
+        #ret.append(StampedRect(deadline, rect, True))                          #COMMENT IN FOR DEFAULT METHOD
         deadline = deadline + 0.25*float(distance.euclidean(rect.maxes, rect.mins))
     return ret
 
-def _fixedResolution(current_position, waypoints, resolution=1):
+def _fixed_resolution(current_position, waypoints, resolution=1):
     intermediate_pt_list = []
     move_to_next_waypt = []
     for waypoint in waypoints:
