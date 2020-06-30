@@ -43,7 +43,8 @@ The following scenarios generated through the generateScenario.py file (a set of
 RANDOM_SCENARIO1 - 6 Drones 3 waypoints each
 RANDOM_SCENARIO2 - 6 Drones 6 waypoints each
 RANDOM_SCENARIO3 - 6 Drones 9 waypoints each
-RANDOM_SCENARIO4 - 10 Drones 5 waypoints each
+RANDOM_SCENARIO4 - 10 Drones 4 waypoints each
+RANDOM_SCENARIO6 - 10 Drones 6 waypoints each
 """
 RANDOM_SCENARIO1 = {'drone0': [(-37.61, -67.08, 0.8), (-43.26, -38.57, 2.49), (-67.98, -50.72, 0.59)],
                     'drone1': [(-40.07, -65.17, 2.14), (-17.36, -44.54, 1.97), (-26.29, -43.94, 0.99)],
