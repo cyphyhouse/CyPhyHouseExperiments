@@ -1,6 +1,10 @@
-- {bot_name: "drone0", bot_type: "QUAD", init_pos: [-80, -65.5, 0.3]}
-- {bot_name: "drone1", bot_type: "QUAD", init_pos: [-82, -65.5, 0.3]}
-- {bot_name: "drone2", bot_type: "QUAD", init_pos: [-84, -65.5, 0.3]}
-- {bot_name: "drone3", bot_type: "QUAD", init_pos: [-86, -65.5, 0.3]}
-- {bot_name: "drone4", bot_type: "QUAD", init_pos: [-88, -65.5, 0.3]}
-- {bot_name: "drone5", bot_type: "QUAD", init_pos: [-90, -65.5, 0.3]}
+- {bot_name: "drone0", bot_type: "QUAD", init_pos: [-70.0, -64.0, 0.3]}
+- {bot_name: "drone1", bot_type: "QUAD", init_pos: [-72.0, -64.0, 0.3]}
+- {bot_name: "drone2", bot_type: "QUAD", init_pos: [-74.0, -64.0, 0.3]}
+- {bot_name: "drone3", bot_type: "QUAD", init_pos: [-76.0, -64.0, 0.3]}
+- {bot_name: "drone4", bot_type: "QUAD", init_pos: [-78.0, -64.0, 0.3]}
+- {bot_name: "drone5", bot_type: "QUAD", init_pos: [-80.0, -64.0, 0.3]}
+- {bot_name: "drone6", bot_type: "QUAD", init_pos: [-82.0, -64.0, 0.3]}
+- {bot_name: "drone7", bot_type: "QUAD", init_pos: [-84.0, -64.0, 0.3]}
+- {bot_name: "drone8", bot_type: "QUAD", init_pos: [-86.0, -64.0, 0.3]}
+- {bot_name: "drone9", bot_type: "QUAD", init_pos: [-88.0, -64.0, 0.3]}
