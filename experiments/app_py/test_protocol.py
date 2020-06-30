@@ -1,5 +1,5 @@
 import datetime
-from multiprocessing import Event, Pipe, Process, Queue
+from multiprocessing import Event, Pipe, Process, SimpleQueue as Queue
 from typing import List, Sequence, Tuple
 
 from reachtube import Contract
@@ -84,12 +84,12 @@ def _multicast(mgr_queue_pair, agent_queue_list: List[Tuple[Queue, Queue]]) -> S
     o_queue_w_msg_list = [o_q for _, o_q in agent_queue_list if not o_q.empty()]  # type: List[Queue]
     # TODO deliver messages only to automatons using the actions
     for o_q in o_queue_w_msg_list:
-        act = o_q.get_nowait()
+        act = o_q.get()
         act_list.append(act)
         mgr_i_q.put(act)
 
     if not mgr_o_q.empty():
-        act = mgr_o_q.get_nowait()
+        act = mgr_o_q.get()
         act_list.append(act)
         for i_q, _ in agent_queue_list:
             i_q.put(act)
@@ -142,11 +142,6 @@ def test_protocol(scenario) -> None:
             if proc.is_alive():
                 print(proc.name, "is still alive. Escalate to SIGTERM")
                 proc.terminate()
-        air_mgr_i_queue.close()
-        air_mgr_o_queue.close()
-        for i_q, o_q in agent_queue_list:
-            i_q.close()
-            o_q.close()
 
         print("========== Recorded Actions =========")
         # TODO More detailed statistics
