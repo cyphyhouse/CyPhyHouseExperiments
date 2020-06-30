@@ -17,7 +17,8 @@ StampedPoint = NamedTuple('StampedPoint',
                            ('position', Tuple[float, float, float])])
 StampedRect = NamedTuple('StampedRect',
                          [('stamp', StampT),
-                          ('rect', Rectangle)])
+                          ('rect', Rectangle),
+                          ('reaching_wp', bool)])
 
 
 class Agent(AutomatonBase):
@@ -117,8 +118,7 @@ class Agent(AutomatonBase):
     def _eff_plan(self) -> None:
         if self.__way_points:
             self._plan = waypoints_to_plan(self.clk.to_sec(), self._position, self.__way_points)
-            self._plan_contr = Contract.from_stamped_rectangles(
-                self._plan)
+            self._plan_contr = self.__plan_to_contr(self._plan)
             self._status = Agent.Status.REQUESTING
         else:
             self.__motion.landing()
@@ -159,10 +159,10 @@ class Agent(AutomatonBase):
 
     def _eff_next_region(self) -> None:
         self._failure_reported = False
-        self._plan.pop(0)
-        self._plan_contr = Contract.from_stamped_rectangles(self._plan)
+        prev = self._plan.pop(0)
+        self._plan_contr = self.__plan_to_contr(self._plan)
 
-        if self.__way_points:
+        if prev.reaching_wp and self.__way_points:
             tgt = self.__way_points.pop(0)
             rospy.logdebug("%s going to %s." % (self, str(tgt)))
             self._target = tgt
@@ -184,8 +184,8 @@ class Agent(AutomatonBase):
                                            self._plan_contr)
 
     def _eff_fail(self) -> None:
-        rospy.logerr("Failed to follow the plan contract. (%.2f, %s) not in %s."
-                     " Real position: %s" %
+        rospy.logdebug("Failed to follow the plan contract. (%.2f, %s) not in %s."
+                       " Real position: %s" %
                      (self.clk.to_sec(), str(self._position), str(self._plan_contr), str(self.__motion.position)))
         self._failure_reported = True
 
@@ -224,6 +224,11 @@ class Agent(AutomatonBase):
         super(Agent, self)._update_continuous_vars()
         self._position = self.__motion.position
 
+    @staticmethod
+    def __plan_to_contr(plan: List[StampedRect]) -> Contract:
+        return Contract.from_stamped_rectangles(
+                tuple((t, rect) for t, rect, _ in plan))
+
 
 BLOAT_WIDTH = 0.5
 
@@ -233,7 +238,7 @@ def waypoints_to_plan(clk: float, pos, way_points) -> List[StampedRect]:
     deadline = clk
     ret = []
     for rect in rect_list:
-        ret.append(StampedRect(deadline, rect))
+        ret.append(StampedRect(deadline, rect, True))
         deadline = deadline + 0.5*float(distance.euclidean(rect.maxes, rect.mins))
     return ret
 
