@@ -188,6 +188,7 @@ class Agent(AutomatonBase):
         rospy.logdebug("Failed to follow the plan contract. (%.2f, %s) not in %s."
                        " Real position: %s" %
                      (self.clk.to_sec(), str(self._position), str(self._plan_contr), str(self.__motion.position)))
+        self.queries["fail"] += 1
         self._failure_reported = True
 
     def _pre_release(self, uid: Hashable, releasable: Contract) -> bool:
