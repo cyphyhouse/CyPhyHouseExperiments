@@ -1,7 +1,7 @@
 import abc
 from collections import Counter
-from multiprocessing import Queue
 from multiprocessing.synchronize import Event
+from queue import Empty, Queue
 from typing import Any, Dict, List, Optional, Tuple
 
 # TODO avoid importing rospy if not using ROS
@@ -85,9 +85,12 @@ def _select_act(aut: AutomatonBase, i_queue: Queue) -> Optional[Action]:
     # TODO fairness
     # Check for input actions first
     while not i_queue.empty():
-        act = i_queue.get()  # type: Action
-        if aut.is_input(act):
-            return act
+        try:
+            act = i_queue.get_nowait()  # type: Action
+            if aut.is_input(act):
+                return act
+        except Empty:
+            break
     # No input action received. Select output or internal actions
     act_list = aut.get_enabled_actions()  # type: List[Action]
     if not bool(act_list):
@@ -140,7 +143,7 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
 
             # Send output action to the environment
             if aut.is_output(act):
-                o_queue.put(act)
+                o_queue.put_nowait(act)
 
             # Run transition of automaton
             aut.transition(act)
@@ -157,5 +160,3 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
         rospy.logdebug("Ending %s at %.2f..." % (aut, end_time))
         print('-', {"name": repr(aut), "t_start": start_time, "t_end": end_time, **aut.queries})
         rospy.signal_shutdown("Shutting down ROS node for %s" % aut)
-        i_queue.close()
-        o_queue.close()

@@ -1,5 +1,6 @@
 import datetime
-from multiprocessing import Event, Pipe, Process, Queue
+from multiprocessing import Event, Manager, Pipe, Process
+from queue import Empty, Queue
 from typing import List, Sequence, Tuple
 
 from reachtube import Contract
@@ -81,26 +82,31 @@ def test_contract_manager() -> None:
 def _multicast(mgr_queue_pair, agent_queue_list: List[Tuple[Queue, Queue]]) -> Sequence[bytes]:
     act_list = []
     mgr_i_q, mgr_o_q = mgr_queue_pair
-    o_queue_w_msg_list = [o_q for _, o_q in agent_queue_list if not o_q.empty()]  # type: List[Queue]
     # TODO deliver messages only to automatons using the actions
-    for o_q in o_queue_w_msg_list:
-        act = o_q.get_nowait()
-        act_list.append(act)
-        mgr_i_q.put(act)
+    for _, o_q in agent_queue_list:
+        try:
+            act = o_q.get_nowait()
+            act_list.append(act)
+            mgr_i_q.put_nowait(act)
+        except Empty:
+            continue
 
-    if not mgr_o_q.empty():
+    try:
         act = mgr_o_q.get_nowait()
         act_list.append(act)
         for i_q, _ in agent_queue_list:
-            i_q.put(act)
+            i_q.put_nowait(act)
+    except Empty:
+        pass
     return act_list
 
 
 def test_protocol(scenario) -> None:
-    stop_ev = Event()
+    sync_mgr = Manager()
+    stop_ev = sync_mgr.Event()
 
     air_mgr = AirspaceManager()
-    air_mgr_i_queue, air_mgr_o_queue = Queue(), Queue()
+    air_mgr_i_queue, air_mgr_o_queue = sync_mgr.Queue(), sync_mgr.Queue()
     air_mgr_proc = Process(target=run_as_process,
                            kwargs={"aut": air_mgr,
                                    "i_queue": air_mgr_i_queue,
@@ -112,7 +118,7 @@ def test_protocol(scenario) -> None:
     agent_proc_list = []  # type: List[Process]
     agent_queue_list = []  # type: List[Tuple[Queue, Queue]]
     for aut in agent_list:
-        aut_i_queue, aut_o_queue = Queue(), Queue()
+        aut_i_queue, aut_o_queue = sync_mgr.Queue(), sync_mgr.Queue()
         agent_queue_list.append((aut_i_queue, aut_o_queue))
         agent_proc_list.append(Process(target=run_as_process,
                                        kwargs={"aut": aut,
@@ -142,11 +148,6 @@ def test_protocol(scenario) -> None:
             if proc.is_alive():
                 print(proc.name, "is still alive. Escalate to SIGTERM")
                 proc.terminate()
-        air_mgr_i_queue.close()
-        air_mgr_o_queue.close()
-        for i_q, o_q in agent_queue_list:
-            i_q.close()
-            o_q.close()
 
         print("========== Recorded Actions =========")
         # TODO More detailed statistics
