@@ -33,7 +33,7 @@ def gen_row(res_list):
 
 
 if __name__ == "__main__":
-    with open('random_scenario6.yaml', 'r') as f:
+    with open('aggressive/loop.yaml', 'r') as f:
         ret_dict = safe_load(f)
         sorted_res = sorted(ret_dict.values(), key=len)
 
@@ -41,3 +41,12 @@ if __name__ == "__main__":
         for ret_list in sorted_res:
             print(" && %2d & %6.2f & %6.2f & %6.2f & %4d & %4.2f & %4.2f & %5.2f & %4.2f \\\\"
                   % gen_row(ret_list))
+
+        for res_list in sorted_res:
+            agent_list = [elem for elem in res_list if elem['name'].startswith("Agent")]
+            num_agents = len(agent_list)
+            num_fails = sum(elem.get('fail', 0) for elem in agent_list)
+            avg_fail_per_agent = num_fails / num_agents
+            fail_percent_list = [elem.get('fail', 0)*elem['Req'] / elem['R(Req)'] for elem in agent_list]
+            avg_fail_percent_per_agent = 100*sum(fail_percent_list) / num_agents
+            print("%2d & %4.2f & %4.2f%%" % (num_agents, avg_fail_per_agent, avg_fail_percent_per_agent))
