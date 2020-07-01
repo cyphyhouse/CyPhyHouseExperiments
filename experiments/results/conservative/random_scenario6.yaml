@@ -89,3 +89,62 @@
 - {'t_end': 180.82, 't_start': 18.914, 'R(Req)': 826, 'name': 'Agent_drone1', 'Qe': 236, 'R(Qm)': 1938250, 'R(Qe)': 819, 'Req': 118, 'Qm': 429493}
 - {'t_end': 204.808, 't_start': 18.883, 'R(Req)': 987, 'name': 'Agent_drone6', 'Qe': 282, 'R(Qm)': 2228338, 'R(Qe)': 980, 'Req': 141, 'Qm': 547085}
 - {'R(Qe)': 1350, 't_start': 18.844, 'name': 'AirspaceManager', 'Qe': 2425, 't_end': 204.94}
+
+2020-07-01T15:46:45 :
+- {'R(Qe)': 0, 'Qe': 2, 't_end': 2429.476, 'name': 'Agent_drone1', 'Qm': 135802, 'Req': 1, 'R(Qm)': 620262, 't_start': 2385.632, 'R(Req)': 7}
+- {'R(Qe)': 266, 'Qe': 78, 't_end': 2466.68, 'name': 'Agent_drone0', 'Qm': 142024, 'Req': 39, 'R(Qm)': 621881, 't_start': 2385.72, 'R(Req)': 273}
+- {'R(Qe)': 80, 't_start': 2385.627, 'Qe': 39, 'name': 'AirspaceManager', 't_end': 2466.816}
+
+2020-07-01T15:58:45 :
+- {'t_start': 2612.416, 'R(Qe)': 0, 'R(Req)': 7, 'name': 'Agent_drone0', 'R(Qm)': 547637, 'Req': 1, 'Qe': 2, 'Qm': 124691, 't_end': 2655.144}
+- {'t_start': 2612.419, 'R(Qe)': 245, 'R(Req)': 252, 'name': 'Agent_drone1', 'R(Qm)': 632047, 'Req': 36, 'Qe': 72, 'Qm': 140248, 't_end': 2691.369}
+- {'Qe': 36, 'R(Qe)': 94, 'name': 'AirspaceManager', 't_start': 2612.353, 't_end': 2691.539}
+
+2020-07-01T16:38:36 :
+- {'R(Req)': 7, 'R(Qm)': 546433, 'R(Qe)': 0, 'Qe': 2, 'name': 'Agent_drone1', 't_start': 3455.343, 't_end': 3499.263, 'Qm': 119286, 'Req': 1}
+- {'R(Req)': 231, 'R(Qm)': 545530, 'R(Qe)': 224, 'Qe': 66, 'name': 'Agent_drone3', 't_start': 3455.436, 't_end': 3532.89, 'Qm': 123418, 'Req': 33}
+- {'R(Req)': 497, 'R(Qm)': 325559, 'R(Qe)': 490, 'Qe': 142, 'name': 'Agent_drone2', 't_start': 3455.351, 't_end': 3552.316, 'Qm': 70332, 'Req': 71}
+- {'R(Req)': 602, 'R(Qm)': 610247, 'R(Qe)': 595, 'Qe': 172, 'name': 'Agent_drone0', 't_start': 3455.415, 't_end': 3583.806, 'Qm': 140180, 'Req': 86}
+- {'t_end': 3583.986, 'Qe': 402, 'R(Qe)': 508, 'name': 'AirspaceManager', 't_start': 3455.312}
+
+2020-07-01T16:50:50 :
+- {'Qe': 2, 'Qm': 118103, 't_start': 3665.165, 'Req': 1, 't_end': 3709.012, 'R(Req)': 7, 'R(Qm)': 540698, 'R(Qe)': 0, 'name': 'Agent_drone1'}
+- {'Qe': 66, 'Qm': 118876, 't_start': 3665.178, 'Req': 33, 't_end': 3742.65, 'R(Req)': 231, 'R(Qm)': 514222, 'R(Qe)': 224, 'name': 'Agent_drone3'}
+- {'Qe': 142, 'Qm': 67235, 't_start': 3665.17, 'Req': 71, 't_end': 3762.103, 'R(Req)': 497, 'R(Qm)': 311788, 'R(Qe)': 490, 'name': 'Agent_drone2'}
+- {'Qe': 172, 'Qm': 133339, 't_start': 3665.219, 'Req': 86, 't_end': 3793.617, 'R(Req)': 602, 'R(Qm)': 577811, 'R(Qe)': 595, 'name': 'Agent_drone0'}
+- {'Qe': 362, 't_start': 3665.123, 't_end': 3793.782, 'name': 'AirspaceManager', 'R(Qe)': 533}
+
+2020-07-01T17:27:24 :
+- {'name': 'Agent_drone2', 't_end': 4433.52, 'R(Qe)': 0, 't_start': 4407.186, 'Qe': 2, 'R(Req)': 7, 'Req': 1, 'Qm': 57154, 'R(Qm)': 264465}
+- {'name': 'Agent_drone4', 't_end': 4458.269, 'R(Qe)': 49, 't_start': 4407.309, 'Qe': 16, 'R(Req)': 56, 'Req': 8, 'Qm': 103379, 'R(Qm)': 509484}
+- {'name': 'Agent_drone5', 't_end': 4473.753, 'R(Qe)': 238, 't_start': 4407.32, 'Qe': 70, 'R(Req)': 245, 'Req': 35, 'Qm': 77941, 'R(Qm)': 324471}
+- {'name': 'Agent_drone3', 't_end': 4494.976, 'R(Qe)': 294, 't_start': 4407.302, 'Qe': 86, 'R(Req)': 301, 'Req': 43, 'Qm': 115254, 'R(Qm)': 500808}
+- {'name': 'Agent_drone1', 't_end': 4531.926, 'R(Qe)': 560, 't_start': 4407.293, 'Qe': 162, 'R(Req)': 567, 'Req': 81, 'Qm': 129192, 'R(Qm)': 586297}
+- {'name': 'Agent_drone0', 't_end': 4570.073, 'R(Qe)': 833, 't_start': 4407.288, 'Qe': 240, 'R(Req)': 840, 'Req': 120, 'Qm': 136940, 'R(Qm)': 597480}
+- {'t_end': 4570.244, 't_start': 4407.249, 'R(Qe)': 730, 'name': 'AirspaceManager', 'Qe': 778}
+
+2020-07-01T17:43:50 :
+- {'Qe': 2, 'R(Qe)': 0, 'Qm': 67806, 'Req': 1, 'R(Qm)': 316674, 'R(Req)': 7, 't_start': 4672.559, 't_end': 4698.926, 'name': 'Agent_drone2'}
+- {'Qe': 2, 'R(Qe)': 0, 'Qm': 105837, 'Req': 1, 'R(Qm)': 474227, 'R(Req)': 7, 't_start': 4672.582, 't_end': 4711.813, 'name': 'Agent_drone7'}
+- {'Qe': 22, 'R(Qe)': 70, 'Qm': 108089, 'Req': 11, 'R(Qm)': 540509, 'R(Req)': 77, 't_start': 4672.57, 't_end': 4726.508, 'name': 'Agent_drone4'}
+- {'Qe': 72, 'R(Qe)': 245, 'Qm': 78565, 'Req': 36, 'R(Qm)': 356273, 'R(Req)': 252, 't_start': 4672.585, 't_end': 4741.76, 'name': 'Agent_drone8'}
+- {'Qe': 76, 'R(Qe)': 259, 'Qm': 72113, 'Req': 38, 'R(Qm)': 303260, 'R(Req)': 266, 't_start': 4672.573, 't_end': 4741.951, 'name': 'Agent_drone5'}
+- {'Qe': 98, 'R(Qe)': 336, 'Qm': 79784, 'Req': 49, 'R(Qm)': 324193, 'R(Req)': 343, 't_start': 4672.586, 't_end': 4755.295, 'name': 'Agent_drone9'}
+- {'Qe': 134, 'R(Qe)': 462, 'Qm': 112558, 'Req': 67, 'R(Qm)': 489833, 'R(Req)': 469, 't_start': 4672.565, 't_end': 4784.409, 'name': 'Agent_drone3'}
+- {'Qe': 210, 'R(Qe)': 728, 'Qm': 119819, 'Req': 105, 'R(Qm)': 544896, 'R(Req)': 735, 't_start': 4672.596, 't_end': 4821.743, 'name': 'Agent_drone1'}
+- {'Qe': 256, 'R(Qe)': 889, 'Qm': 126501, 'Req': 128, 'R(Qm)': 539851, 'R(Req)': 896, 't_start': 4672.576, 't_end': 4846.004, 'name': 'Agent_drone6'}
+- {'Qe': 316, 'R(Qe)': 1099, 'Qm': 133006, 'Req': 158, 'R(Qm)': 578786, 'R(Req)': 1106, 't_start': 4672.591, 't_end': 4874.252, 'name': 'Agent_drone0'}
+- {'name': 'AirspaceManager', 'Qe': 2278, 't_start': 4672.395, 'R(Qe)': 1617, 't_end': 4874.369}
+
+2020-07-01T18:08:21 :
+- {'t_end': 5071.534, 'R(Qm)': 494739, 'name': 'Agent_drone6', 'Qm': 114693, 'Req': 1, 'Qe': 2, 't_start': 5026.775, 'R(Qe)': 0, 'R(Req)': 7}
+- {'t_end': 5099.308, 'R(Qm)': 491404, 'name': 'Agent_drone3', 'Qm': 111822, 'Req': 28, 'Qe': 56, 't_start': 5026.795, 'R(Qe)': 189, 'R(Req)': 196}
+- {'t_end': 5117.368, 'R(Qm)': 357735, 'name': 'Agent_drone8', 'Qm': 78988, 'Req': 57, 'Qe': 114, 't_start': 5026.78, 'R(Qe)': 392, 'R(Req)': 399}
+- {'t_end': 5124.583, 'R(Qm)': 311202, 'name': 'Agent_drone5', 'Qm': 74300, 'Req': 66, 'Qe': 132, 't_start': 5026.799, 'R(Qe)': 455, 'R(Req)': 462}
+- {'t_end': 5134.761, 'R(Qm)': 329799, 'name': 'Agent_drone9', 'Qm': 81605, 'Req': 74, 'Qe': 148, 't_start': 5026.784, 'R(Qe)': 511, 'R(Req)': 518}
+- {'t_end': 5146.36, 'R(Qm)': 283114, 'name': 'Agent_drone2', 'Qm': 61292, 'Req': 93, 'Qe': 186, 't_start': 5026.793, 'R(Qe)': 644, 'R(Req)': 651}
+- {'t_end': 5149.835, 'R(Qm)': 433722, 'name': 'Agent_drone7', 'Qm': 98193, 'Req': 84, 'Qe': 168, 't_start': 5026.78, 'R(Qe)': 581, 'R(Req)': 588}
+- {'t_end': 5171.06, 'R(Qm)': 555336, 'name': 'Agent_drone4', 'Qm': 113496, 'Req': 100, 'Qe': 200, 't_start': 5026.795, 'R(Qe)': 693, 'R(Req)': 700}
+- {'t_end': 5206.404, 'R(Qm)': 572734, 'name': 'Agent_drone1', 'Qm': 126220, 'Req': 135, 'Qe': 270, 't_start': 5026.79, 'R(Qe)': 938, 'R(Req)': 945}
+- {'t_end': 5244.473, 'R(Qm)': 595635, 'name': 'Agent_drone0', 'Qm': 137122, 'Req': 174, 'Qe': 348, 't_start': 5026.79, 'R(Qe)': 1211, 'R(Req)': 1218}
+- {'t_end': 5244.657, 't_start': 5026.578, 'R(Qe)': 2127, 'name': 'AirspaceManager', 'Qe': 3353}
