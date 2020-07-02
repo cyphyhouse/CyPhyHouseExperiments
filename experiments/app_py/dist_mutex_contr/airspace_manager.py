@@ -27,7 +27,7 @@ class AirspaceManager(AutomatonBase):
         return act[0] == "reply"
 
     def is_input(self, act: Action) -> bool:
-        return act[0] == "request" or act[0] == "release"
+        return act[0] == "request" or act[0] == "release" or act[0] == "fail"
 
     def invariant(self) -> bool:
         pairwise_values = combinations(self._contr_dict.values(), 2)  # type: Iterator[Tuple[Contract, ...]]
@@ -45,6 +45,8 @@ class AirspaceManager(AutomatonBase):
             self._eff_reply(**act[1])
         elif act[0] == "release":
             self._eff_release(**act[1])
+        elif act[0] == "fail":
+            self._eff_fail(**act[1])
         elif self._pre_marker():
             self._eff_marker()
         else:
@@ -60,6 +62,9 @@ class AirspaceManager(AutomatonBase):
 
     def _eff_release(self, uid: Hashable, releasable: Contract) -> None:
         self._contr_dict[uid] -= releasable
+
+    def _eff_fail(self, uid: Hashable) -> None:
+        print("received fail for %s" % str(uid))
 
     def _pre_marker(self):
         return bool(self._contr_dict) and self.clk >= self.__deadline
