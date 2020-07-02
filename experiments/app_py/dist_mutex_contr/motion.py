@@ -4,7 +4,7 @@ from threading import RLock
 from typing import Tuple, Union
 
 from actionlib import GoalStatus, SimpleActionClient, SimpleGoalState
-from geometry_msgs.msg import Point, PoseStamped
+from geometry_msgs.msg import Point, PoseStamped, Quaternion
 from hector_uav_msgs.msg import LandingAction, LandingGoal, \
     PoseAction, PoseGoal, TakeoffAction, TakeoffGoal
 import rospy
@@ -20,6 +20,7 @@ class MotionHectorQuad:
 
         self._var_lock = RLock()
         self._position = (0.0, 0.0, 0.0)
+        self._orientation = (0.0, 0.0, 0.0, 1.0)
 
         takeoff_topic = rospy.resolve_name(topic_prefix + "/action/takeoff")
         self._takeoff_client = SimpleActionClient(takeoff_topic, TakeoffAction)
@@ -42,6 +43,21 @@ class MotionHectorQuad:
         # NOTE the lock may be redundant because assigning references should be atomic
         with self._var_lock:
             self._position = p
+
+    @property
+    def orientation(self) -> Tuple[float, float, float, float]:
+        with self._var_lock:
+            # Return copy to avoid multiple threads accessing the same reference
+            return deepcopy(self._orientation)
+
+    @orientation.setter
+    def orientation(self, p: Union[Quaternion, Tuple[float, float, float, float]]) -> None:
+        if isinstance(p, Quaternion):
+            p = (p.x, p.y, p.z, p.w)
+
+        # NOTE the lock may be redundant because assigning references should be atomic
+        with self._var_lock:
+            self._orientation = p
 
     def takeoff(self, timeout: rospy.Duration = rospy.Duration()) -> bool:
         return self._send_action_and_wait(self._takeoff_client,

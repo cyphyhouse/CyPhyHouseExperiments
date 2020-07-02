@@ -111,11 +111,12 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
         if isinstance(aut, Agent):
             pose_topic_name = "/vrpn_client_node/%s/pose" % str(aut.uid)
 
-            def update_position(data: PoseStamped):
+            def update_pose(data: PoseStamped):
                 aut.motion.position = data.pose.position
+                aut.motion.orientation = data.pose.orientation
 
             # NOTE This creates a thread in this process
-            rospy.Subscriber(pose_topic_name, PoseStamped, update_position, queue_size=10)
+            rospy.Subscriber(pose_topic_name, PoseStamped, update_pose, queue_size=10)
 
             rospy.wait_for_message(pose_topic_name, PoseStamped, timeout=10.0)
 
