@@ -8,9 +8,16 @@ import numpy as np
 from reachtube.drone3d_types import Contract
 from scipy.spatial import Rectangle
 from scipy.spatial.distance import euclidean
+from scipy.spatial.transform import Rotation as Rot
 
 from .motion import MotionHectorQuad
 from .tioa_base import Action, AutomatonBase
+
+#############
+import random
+#############
+
+
 
 StampT = float
 StampedPoint = NamedTuple('StampedPoint',
@@ -30,6 +37,9 @@ class Agent(AutomatonBase):
         MOVING = 4
         RELEASING = 5
         STOPPING = 6
+        ############
+        # FAILING = 7
+        ############
 
     def __init__(self, uid: Hashable, motion: MotionHectorQuad, waypoints: List):
         super(Agent, self).__init__()
@@ -51,6 +61,9 @@ class Agent(AutomatonBase):
         # self.__motion.position may be modified by ROS subscribers concurrently
         # so we need self._position to stay the same during a transition
         self._position = self.__motion.position
+        ###############################
+        self._orientation = Rot.from_quat(self.__motion._orientation).as_euler('zyx')
+        ###############################
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + "_" + str(self.uid)
@@ -72,11 +85,18 @@ class Agent(AutomatonBase):
         return self.__motion
 
     def is_internal(self, act: Action) -> bool:
+        ####################################
         return act[0] == "plan" \
-            or act[0] == "next_region" or act[0] == "succeed" or act[0] == "fail"
+            or act[0] == "next_region" or act[0] == "succeed" # or act[0] == "fail"
+
+        #    or act[0] == "next_region" or act[0] == "succeed"
+        ###################################
 
     def is_output(self, act: Action) -> bool:
-        return (act[0] == "request" or act[0] == "release") and act[1]["uid"] == self.uid
+        ###################################
+        # return (act[0] == "request" or act[0] == "release") and act[1]["uid"] == self.uid
+        return (act[0] == "request" or act[0] == "release" or act[0] == "fail") and act[1]["uid"] == self.uid
+        ###################################
 
     def is_input(self, act: Action) -> bool:
         return act[0] == "reply" and act[1]["uid"] == self.uid
@@ -166,7 +186,18 @@ class Agent(AutomatonBase):
         if prev.reaching_wp and self.__way_points:
             tgt = self.__way_points.pop(0)
             rospy.logdebug("%s going to %s." % (self, str(tgt)))
-            self._target = tgt
+            ############################
+            rsample = random.gauss(0,0.5)
+            if abs(rsample) >= 1:
+                rdisturbance_x = random.gauss(0,100)
+                rdisturbance_y = random.gauss(0,100)
+                rdisturbance_z = random.gauss(0,1)
+                tgt = (tgt[0] + rdisturbance_x, tgt[1] + rdisturbance_y, tgt[3] + rdisturbance_z)
+                rospy.logdebug("%s is actuall going to %s after disturbance." % (self, str(tgt)))
+                self._target = tgt
+            else:
+                self._target = tgt
+            ############################
 
     def _pre_succeed(self) -> bool:
         return self._status == Agent.Status.MOVING and len(self._plan) == 1 \
@@ -178,18 +209,43 @@ class Agent(AutomatonBase):
         self._status = Agent.Status.RELEASING
         rospy.logdebug("Agent %s succeeded" % str(self.__uid))
 
-    def _pre_fail(self) -> bool:
+    def _pre_fail(self, uid: Hashable, target: Contract) -> bool: #
         return self._status == Agent.Status.MOVING \
+            and uid == self.uid \
             and not self._failure_reported \
             and not self._membership_query(StampedPoint(self.clk.to_sec(), self._position),
                                            self._plan_contr)
 
-    def _eff_fail(self) -> None:
+    def _eff_fail(self, uid: Hashable, target: Contract) -> None: # 
         rospy.logdebug("Failed to follow the plan contract. (%.2f, %s) not in %s."
                        " Real position: %s" %
                      (self.clk.to_sec(), str(self._position), str(self._plan_contr), str(self.__motion.position)))
         self.queries["fail"] += 1
         self._failure_reported = True
+        ###################
+        print("self.__way_points: ", self.__way_points, "wp number:", len(self.__way_points))
+        if self.__way_points:
+            tgt = self.__way_points.pop(0)
+            ############################
+            rsample = random.gauss(0,0.5)
+            if abs(rsample) >= 1:
+                rdisturbance_x = random.gauss(0,100)
+                rdisturbance_y = random.gauss(0,100)
+                rdisturbance_z = random.gauss(0,1)
+                tgt = (tgt[0] + rdisturbance_x, tgt[1] + rdisturbance_y, tgt[3] + rdisturbance_z)
+                rospy.logdebug("%s is actuall going to %s after disturbance." % (self, str(tgt)))
+                self._target = tgt
+            else:
+                self._target = tgt
+            ############################
+            self._plan = waypoints_to_plan(self.clk.to_sec(), self.__motion.position, self.__way_points)
+            #self._plan = 
+            self._plan_contr = self.__plan_to_contr(self._plan)
+            self._curr_contr = self._plan_contr
+        else:
+            self.__motion.landing()
+            self._status = Agent.Status.STOPPING
+        ###################
 
     def _pre_release(self, uid: Hashable, releasable: Contract) -> bool:
         return self._status == Agent.Status.RELEASING \
@@ -215,8 +271,11 @@ class Agent(AutomatonBase):
             ret.append(("next_region", {}))
         if self._pre_succeed():
             ret.append(("succeed", {}))
-        if self._pre_fail():
-            ret.append(("fail", {}))
+        if self._pre_fail(self.uid, self._curr_contr): # 
+            ###############################
+            # ret.append(("fail", {"uid": self.uid}))
+            ret.append(("fail", {"uid": self.uid, "target": self._curr_contr}))
+            ###############################
         if self._status == Agent.Status.RELEASING:
             ret.append(("release", {"uid": self.uid, "releasable": self._free_contr}))
 

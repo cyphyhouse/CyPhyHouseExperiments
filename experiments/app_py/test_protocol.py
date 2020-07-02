@@ -163,9 +163,9 @@ if __name__ == "__main__":
         # TODO make them individual test files
         # test_agent()
         # test_contract_manager()
-        subset = eceb_scenarios.BUSY_CORRIDOR.keys()
+        subset = eceb_scenarios.LOOP.keys()
         # subset = ["drone" + str(2*i+1) for i in range(5)]
-        sc = {key: val for key, val in eceb_scenarios.BUSY_CORRIDOR.items()
+        sc = {key: val for key, val in eceb_scenarios.LOOP.items()
               if key in subset}
         print(datetime.datetime.now().replace(microsecond=0).isoformat(), ':')
         test_protocol(sc)
