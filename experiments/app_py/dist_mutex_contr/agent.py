@@ -63,6 +63,7 @@ class Agent(AutomatonBase):
         self._position = self.__motion.position
         ###############################
         self._orientation = Rot.from_quat(self.__motion._orientation).as_euler('zyx')
+        self._true_wp = None
         ###############################
 
     def __repr__(self) -> str:
@@ -167,6 +168,9 @@ class Agent(AutomatonBase):
                 tgt = self.__way_points.pop(0)
                 rospy.logdebug("%s going to %s." % (self, str(tgt)))
                 self._target = tgt
+                #################
+                self._true_wp = None
+                ################
             else:
                 # Not enough contract for the plan. Keep only current contracts
                 self._free_contr = acquired - self._curr_contr
@@ -187,15 +191,17 @@ class Agent(AutomatonBase):
             tgt = self.__way_points.pop(0)
             rospy.logdebug("%s going to %s." % (self, str(tgt)))
             ############################
-            rsample = random.gauss(0,0.5)
-            if abs(rsample) >= 1:
-                rdisturbance_x = random.gauss(0,100)
-                rdisturbance_y = random.gauss(0,100)
+            rsample = random.random()
+            if abs(rsample) <= 0.1:
+                self._true_wp = tgt
+                rdisturbance_x = random.gauss(0,1)
+                rdisturbance_y = random.gauss(0,1)
                 rdisturbance_z = random.gauss(0,1)
-                tgt = (tgt[0] + rdisturbance_x, tgt[1] + rdisturbance_y, tgt[3] + rdisturbance_z)
+                tgt = (tgt[0] + rdisturbance_x, tgt[1] + rdisturbance_y, tgt[2] + rdisturbance_z)
                 rospy.logdebug("%s is actuall going to %s after disturbance." % (self, str(tgt)))
                 self._target = tgt
             else:
+                self._true_wp = None
                 self._target = tgt
             ############################
 
@@ -223,12 +229,11 @@ class Agent(AutomatonBase):
         self.queries["fail"] += 1
         self._failure_reported = True
         ###################
-        print("self.__way_points: ", self.__way_points, "wp number:", len(self.__way_points))
         if self.__way_points:
-            tgt = self.__way_points.pop(0)
-            self._target = tgt
-            self._plan = waypoints_to_plan(self.clk.to_sec(), self._position, self.__way_points)
-            #self._plan = 
+            if self._true_wp != None:
+                self._target = self._true_wp
+                self._true_wp = None
+            self._plan = waypoints_to_plan(self.clk.to_sec(), self._position, self.__way_points) 
             self._plan_contr = self.__plan_to_contr(self._plan)
             self._curr_contr = self._plan_contr
         else:
