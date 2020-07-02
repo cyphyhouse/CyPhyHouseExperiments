@@ -42,24 +42,38 @@ CyPhyHouseExperiments is licensed under the terms of the NCSA License (see the f
 
 Installation
 ============
-
-1.  Inside the src directory of a catkin_ws clone the following repos:
+0. Download ROS Kinetic and create a catkin_ws
+	- [ROS Kinetic Ubuntu](http://wiki.ros.org/kinetic/Installation/Ubuntu)
+	- [Creating a catkin_ws](http://wiki.ros.org/catkin/Tutorials/create_a_workspace)
+1.  Inside the `src` directory of your catkin_ws clone the following repos:
  	- `$ git clone https://github.com/cyphyhouse/CyPyHous3.git --branch for-cymulator`
 	- `$ git clone https://github.com/cyphyhouse/Cymulator`
-2. Run `$ catkin_make` inside your catkin_ws directory
+	- `$ git clone https://github.com/tu-darmstadt-ros-pkg/hector_quadrotor`
+	- `$ git clone https://github.com/tu-darmstadt-ros-pkg/hector_gazebo`
+2. Run `$ catkin_make` inside your `catkin_ws` directory
 3.  Inside the `CyPyHous3` folder run `$ pip install -e ./` 
-4. `$ source devel/setup.bash` from you`catkin_ws` directory to source the new environment variables  
-5. In any directory clone the following repo: `$ git clone https://github.com/cyphyhouse/CyPhyHouseExperiments`
+4. `$ source devel/setup.bash` from your `catkin_ws` directory to source the new environment variables  
+5. In any directory (does not need to be in the catkin_ws) clone the following repo: `$ git clone https://github.com/cyphyhouse/CyPhyHouseExperiments`
 6.   Download the latest version of the [koord langauge](https://github.com/cyphyhouse/KoordLanguage/releases)
-7.  In a separate terminal: ` $ rosrun cym_gazebo cymulate.py scenes/cym_5_drones.yml`  (make sure that this terminal contains the sourced environment variables from step 4)
-8.  Run a koord experiment:
-	- ` ./experiment.sh apps/lineform.koord configs/motion_5_drones.global.yml`
-	- `$ ./experiment_no_koord.sh app_py/follow_path.krd.py configs/motion_5_drones.global.yml`(if the above fails, note this is without koord, and probably means you have the wrong version of Java)
+	- place `koord-0.1-jar-with-dependencies.jar` inside `CyPhyHouseExperiments/experiments` folder
+7.  In a separate terminal naviagate to `CyPhyHouseExperiments/experiments` folder and run: ` $ rosrun cym_gazebo cymulate.py scenes/cym_5_drones.yml`  (make sure to re-source this terminal with environment variables from step 4)
+8.  Run a koord experiment (make sure you are in `CyPhyHouseExperiments/experiments` directory):
+	- ` ./experiment.sh apps/lineform.koord configs/motion_5_drones.global.yml` (if the this fails,you probably have the wrong version of Java)
+	- `$ ./experiment_no_koord.sh app_py/follow_path.krd.py configs/motion_5_drones.global.yml`(note this is without koord)
   
 Installation Help
 -----------------
 If the installation fails please make sure the following packages are installed:
 - `ros-kinetic-gazebo9-ros-pkgs`
+- `ros-kinetic-gazebo9-ros` 
+- `ros-kinetic-gazebo9-ros-control`
+- `ros-kinetic-gazebo9-plugins` 
+- `ros-kinetic-ackermann-msgs` 
+- `ros-kinetic-geographic-msgs` 
+- `ros-kinetic-serial`
+- `ros-kinetic-ros-control ros-kinetic-ros-controllers`
+- `ros-kinetic-hector-localization ros-kinetic-hector-models`
+- `ros-kinetic-geometry2 ros-kinetic-robot`
 - `libyaml-cpp-dev`
 -  Java version 1.11 (needed for using koord language)
 - `netifaces`
