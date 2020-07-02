@@ -226,19 +226,8 @@ class Agent(AutomatonBase):
         print("self.__way_points: ", self.__way_points, "wp number:", len(self.__way_points))
         if self.__way_points:
             tgt = self.__way_points.pop(0)
-            ############################
-            rsample = random.gauss(0,0.5)
-            if abs(rsample) >= 1:
-                rdisturbance_x = random.gauss(0,100)
-                rdisturbance_y = random.gauss(0,100)
-                rdisturbance_z = random.gauss(0,1)
-                tgt = (tgt[0] + rdisturbance_x, tgt[1] + rdisturbance_y, tgt[3] + rdisturbance_z)
-                rospy.logdebug("%s is actuall going to %s after disturbance." % (self, str(tgt)))
-                self._target = tgt
-            else:
-                self._target = tgt
-            ############################
-            self._plan = waypoints_to_plan(self.clk.to_sec(), self.__motion.position, self.__way_points)
+            self._target = tgt
+            self._plan = waypoints_to_plan(self.clk.to_sec(), self._position, self.__way_points)
             #self._plan = 
             self._plan_contr = self.__plan_to_contr(self._plan)
             self._curr_contr = self._plan_contr
