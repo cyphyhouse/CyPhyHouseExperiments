@@ -56,6 +56,8 @@ class AirspaceManager(AutomatonBase):
             self._eff_reply(**act[1])
         elif act[0] == "release":
             self._eff_release(**act[1])
+        elif act[0] == "fail":
+            self._eff_fail(**act[1])
         elif self._pre_marker():
             self._eff_marker()
         else:
