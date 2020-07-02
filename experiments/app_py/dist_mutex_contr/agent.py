@@ -73,10 +73,10 @@ class Agent(AutomatonBase):
 
     def is_internal(self, act: Action) -> bool:
         return act[0] == "plan" \
-            or act[0] == "next_region" or act[0] == "succeed" or act[0] == "fail"
+            or act[0] == "next_region" or act[0] == "succeed"
 
     def is_output(self, act: Action) -> bool:
-        return (act[0] == "request" or act[0] == "release") and act[1]["uid"] == self.uid
+        return (act[0] == "request" or act[0] == "release" or act[0] == "fail") and act[1]["uid"] == self.uid
 
     def is_input(self, act: Action) -> bool:
         return act[0] == "reply" and act[1]["uid"] == self.uid
@@ -178,13 +178,14 @@ class Agent(AutomatonBase):
         self._status = Agent.Status.RELEASING
         rospy.logdebug("Agent %s succeeded" % str(self.__uid))
 
-    def _pre_fail(self) -> bool:
+    def _pre_fail(self, uid: Hashable) -> bool:
         return self._status == Agent.Status.MOVING \
+            and uid == self.uid \
             and not self._failure_reported \
             and not self._membership_query(StampedPoint(self.clk.to_sec(), self._position),
                                            self._plan_contr)
 
-    def _eff_fail(self) -> None:
+    def _eff_fail(self, uid: Hashable) -> None:
         rospy.logdebug("Failed to follow the plan contract. (%.2f, %s) not in %s."
                        " Real position: %s" %
                      (self.clk.to_sec(), str(self._position), str(self._plan_contr), str(self.__motion.position)))
@@ -215,8 +216,8 @@ class Agent(AutomatonBase):
             ret.append(("next_region", {}))
         if self._pre_succeed():
             ret.append(("succeed", {}))
-        if self._pre_fail():
-            ret.append(("fail", {}))
+        if self._pre_fail(self.uid):
+            ret.append(("fail", {"uid": self.uid}))
         if self._status == Agent.Status.RELEASING:
             ret.append(("release", {"uid": self.uid, "releasable": self._free_contr}))
 
