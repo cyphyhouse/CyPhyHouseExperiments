@@ -194,9 +194,9 @@ class Agent(AutomatonBase):
             rsample = random.random()
             if abs(rsample) <= 0.1:
                 self._true_wp = tgt
-                rdisturbance_x = random.gauss(0,1)
-                rdisturbance_y = random.gauss(0,1)
-                rdisturbance_z = random.gauss(0,1)
+                rdisturbance_x = 0#random.gauss(0,1)
+                rdisturbance_y = 0#random.gauss(0,1)
+                rdisturbance_z = 0#random.gauss(0,1)
                 tgt = (tgt[0] + rdisturbance_x, tgt[1] + rdisturbance_y, tgt[2] + rdisturbance_z)
                 rospy.logdebug("%s is actuall going to %s after disturbance." % (self, str(tgt)))
                 self._target = tgt
@@ -222,7 +222,7 @@ class Agent(AutomatonBase):
             and not self._membership_query(StampedPoint(self.clk.to_sec(), self._position),
                                            self._plan_contr)
 
-    def _eff_fail(self, uid: Hashable, target: Contract) -> None: # 
+    def _eff_fail(self, uid: Hashable, target: Contract) -> None: #
         rospy.logdebug("Failed to follow the plan contract. (%.2f, %s) not in %s."
                        " Real position: %s" %
                      (self.clk.to_sec(), str(self._position), str(self._plan_contr), str(self.__motion.position)))
@@ -231,11 +231,14 @@ class Agent(AutomatonBase):
         ###################
         if self.__way_points:
             if self._true_wp != None:
-                self._target = self._true_wp
+                print("At line 234")
+                self._target = deepcopy(self._true_wp)
                 self._true_wp = None
-            self._plan = waypoints_to_plan(self.clk.to_sec(), self._position, self.__way_points) 
+            self.__way_points.insert(0, deepcopy(self._target))
+            self._plan = waypoints_to_plan(self.clk.to_sec(), self._position, self.__way_points)
             self._plan_contr = self.__plan_to_contr(self._plan)
             self._curr_contr = self._plan_contr
+            self.__way_points.pop(0)
         else:
             self.__motion.landing()
             self._status = Agent.Status.STOPPING
@@ -265,7 +268,7 @@ class Agent(AutomatonBase):
             ret.append(("next_region", {}))
         if self._pre_succeed():
             ret.append(("succeed", {}))
-        if self._pre_fail(self.uid, self._curr_contr): # 
+        if self._pre_fail(self.uid, self._curr_contr): #
             ###############################
             # ret.append(("fail", {"uid": self.uid}))
             ret.append(("fail", {"uid": self.uid, "target": self._curr_contr}))
