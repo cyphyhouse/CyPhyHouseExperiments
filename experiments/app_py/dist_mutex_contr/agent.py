@@ -169,7 +169,7 @@ class Agent(AutomatonBase):
                 rospy.logdebug("%s going to %s." % (self, str(tgt)))
                 self._target = tgt
                 #################
-                self._true_wp = None
+                self._true_wp = deepcopy(tgt)
                 ################
             else:
                 # Not enough contract for the plan. Keep only current contracts
@@ -189,11 +189,11 @@ class Agent(AutomatonBase):
 
         if prev.reaching_wp and self.__way_points:
             tgt = self.__way_points.pop(0)
+            self._true_wp = deepcopy(tgt)
             rospy.logdebug("%s going to %s." % (self, str(tgt)))
             ############################
             rsample = random.random()
             if abs(rsample) <= 0.1:
-                self._true_wp = tgt
                 rdisturbance_x = 0#random.gauss(0,1)
                 rdisturbance_y = 0#random.gauss(0,1)
                 rdisturbance_z = 0#random.gauss(0,1)
@@ -201,7 +201,6 @@ class Agent(AutomatonBase):
                 rospy.logdebug("%s is actuall going to %s after disturbance." % (self, str(tgt)))
                 self._target = tgt
             else:
-                self._true_wp = None
                 self._target = tgt
             ############################
 
@@ -230,11 +229,7 @@ class Agent(AutomatonBase):
         self._failure_reported = True
         ###################
         if self.__way_points:
-            if self._true_wp != None:
-                print("At line 234")
-                self._target = deepcopy(self._true_wp)
-                self._true_wp = None
-            self.__way_points.insert(0, deepcopy(self._target))
+            self.__way_points.insert(0, deepcopy(self._true_wp))
             self._plan = waypoints_to_plan(self.clk.to_sec(), self._position, self.__way_points)
             self._plan_contr = self.__plan_to_contr(self._plan)
             self._curr_contr = self._plan_contr
