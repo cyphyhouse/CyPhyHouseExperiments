@@ -83,7 +83,10 @@ class AirspaceManager(AutomatonBase):
         self._failed_uid.add(uid)
         #self._reply_set.add(uid)
         print("received fail for %s" % str(uid))
-        #if all(self._disjoint_query(target, v) for k, v in self._contr_dict.items() if k != uid):
+        # if all(self._disjoint_query(target, v) for k, v in self._contr_dict.items() if k != uid):
+        for k, v in self._contr_dict.items():
+            if k != uid and not self._disjoint_query(target, v):
+                self.queries['notifications'] += 1
         self._contr_dict[uid] = target
     ##############################################
     
