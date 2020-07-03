@@ -193,10 +193,10 @@ class Agent(AutomatonBase):
             rospy.logdebug("%s going to %s." % (self, str(tgt)))
             ############################
             rsample = random.random()
-            if abs(rsample) <= 0.1:
-                rdisturbance_x = 0#random.gauss(0,1)
-                rdisturbance_y = 0#random.gauss(0,1)
-                rdisturbance_z = 0#random.gauss(0,1)
+            if abs(rsample) <= 0.9:
+                rdisturbance_x = random.gauss(0,5)
+                rdisturbance_y = random.gauss(0,5)
+                rdisturbance_z = random.gauss(0,5)
                 tgt = (tgt[0] + rdisturbance_x, tgt[1] + rdisturbance_y, tgt[2] + rdisturbance_z)
                 rospy.logdebug("%s is actuall going to %s after disturbance." % (self, str(tgt)))
                 self._target = tgt
@@ -228,15 +228,16 @@ class Agent(AutomatonBase):
         self.queries["fail"] += 1
         self._failure_reported = True
         ###################
-        if self.__way_points:
-            self.__way_points.insert(0, deepcopy(self._true_wp))
-            self._plan = waypoints_to_plan(self.clk.to_sec(), self._position, self.__way_points)
-            self._plan_contr = self.__plan_to_contr(self._plan)
-            self._curr_contr = self._plan_contr
-            self.__way_points.pop(0)
-        else:
-            self.__motion.landing()
-            self._status = Agent.Status.STOPPING
+        #if self.__way_points:
+        self._target = deepcopy(self._true_wp)
+        self.__way_points.insert(0, deepcopy(self._true_wp))
+        self._plan = waypoints_to_plan(self.clk.to_sec(), self._position, self.__way_points)
+        self._plan_contr = self.__plan_to_contr(self._plan)
+        self._curr_contr = self._plan_contr
+        self.__way_points.pop(0)
+        # else:
+        #     self.__motion.landing()
+        #     self._status = Agent.Status.STOPPING
         ###################
 
     def _pre_release(self, uid: Hashable, releasable: Contract) -> bool:
@@ -286,7 +287,7 @@ class Agent(AutomatonBase):
 BLOAT_WIDTH = 0.5
 
 
-def waypoints_to_plan(clk: float, pos, way_points, default=False) -> List[StampedRect]:
+def waypoints_to_plan(clk: float, pos, way_points, default=True) -> List[StampedRect]:
     if default:
         rect_list = _bloat_path(pos, way_points)
         deadline = clk
