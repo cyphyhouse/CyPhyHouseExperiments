@@ -56,10 +56,6 @@ Installation
 5. In any directory (does not need to be in the catkin_ws) clone the following repo: `$ git clone https://github.com/cyphyhouse/CyPhyHouseExperiments`
 6.   Download the latest version of the [koord langauge](https://github.com/cyphyhouse/KoordLanguage/releases)
 	- place `koord-0.1-jar-with-dependencies.jar` inside `CyPhyHouseExperiments/experiments` folder
-7.  In a separate terminal naviagate to `CyPhyHouseExperiments/experiments` folder and run: ` $ rosrun cym_gazebo cymulate.py scenes/cym_5_drones.yml`  (make sure to re-source this terminal with environment variables from step 4)
-8.  Run a koord experiment (make sure you are in `CyPhyHouseExperiments/experiments` directory):
-	- ` ./experiment.sh apps/lineform.koord configs/motion_5_drones.global.yml` (if the this fails,you probably have the wrong version of Java)
-	- `$ ./experiment_no_koord.sh app_py/follow_path.krd.py configs/motion_5_drones.global.yml`(note this is without koord)
   
 Installation Help
 -----------------
