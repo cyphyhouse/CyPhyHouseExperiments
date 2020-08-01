@@ -6,11 +6,11 @@ from typing import List, Sequence, Tuple
 from reachtube import Contract
 from scipy.spatial import Rectangle
 
-from .dist_mutex_contr.airspace_manager import AirspaceManager
-from .dist_mutex_contr.agent import Agent
-from .dist_mutex_contr.motion import MotionHectorQuad
-from .dist_mutex_contr.tioa_base import run_as_process
-from . import eceb_scenarios
+from dist_mutex_contr.airspace_manager import AirspaceManager
+from dist_mutex_contr.agent import Agent
+from dist_mutex_contr.motion import MotionHectorQuad
+from dist_mutex_contr.tioa_base import run_as_process
+import eceb_scenarios
 
 
 def test_agent() -> None:
@@ -163,9 +163,8 @@ if __name__ == "__main__":
         # TODO make them individual test files
         # test_agent()
         # test_contract_manager()
-        subset = eceb_scenarios.LOOP.keys()
-        # subset = ["drone" + str(2*i+1) for i in range(5)]
-        sc = {key: val for key, val in eceb_scenarios.LOOP.items()
+        subset = eceb_scenarios.SIMPLE_CORRIDOR.keys()
+        sc = {key: val for key, val in eceb_scenarios.SIMPLE_CORRIDOR.items()
               if key in subset}
         print(datetime.datetime.now().replace(microsecond=0).isoformat(), ':')
         test_protocol(sc)
