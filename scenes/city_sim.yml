@@ -1,0 +1,2 @@
+- {bot_name: "drone0", bot_type: "QUAD", init_pos: [-40.0, 7.0, 5.3]}
+- {bot_name: "drone6", bot_type: "QUAD", init_pos: [-41.0, 7.0, 5.3]}

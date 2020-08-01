@@ -1,0 +1,27 @@
+leader_pid: 0
+mutex_handler: BaseMutexHandler
+udp_bcast_ip: 127.255.255.255
+udp_port: 61820
+agents:
+    - pid: 0
+      on_device: device0
+      motion_automaton: MoatTestCar
+devices:
+    device0:
+      bot_type: CAR
+      ip: 127.0.1.0
+      motion:
+        ros_node_prefix: 'waypoint_node'
+        queue_size: 1
+        waypoint_topic:
+            topic: 'waypoint'
+            type: PoseStamped  # geometry_msgs/PoseStamped
+        reached_topic:
+            topic: 'reached'
+            type: String  # std_msgs/String
+        positioning_topic:
+            topic:  '/vrpn_client_node/'  # TODO '"/vrpn_client_node/" + vicon_obj + "/pose"'
+            type: PoseStamped  # geometry_msgs/PoseStamped
+        planner: SimplePlanner
+        motion_automata: [MoatTestCar]
+

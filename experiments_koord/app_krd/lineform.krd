@@ -12,9 +12,10 @@ local:
 
 init:
    mypos[pid] = Motion.position
+   Motion.target = Motion.position + pos3d(0.0, 0.0, 1.0) 
 
 update:
-   pre: (i < 100)
+   pre: i < 100
    eff:
       i = i + 1
       mypos[pid] = Motion.position
