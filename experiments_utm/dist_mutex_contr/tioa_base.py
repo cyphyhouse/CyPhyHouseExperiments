@@ -148,9 +148,6 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
 
             # Run transition of automaton
             aut.transition(act)
-            print("applied a transition!")
-        print("did enviroment stop? ", stop_ev.is_set() )
-        print("did reached_sink_state? ",  aut.reached_sink_state() )
 
     except KeyboardInterrupt:
         print("KeyboardInterrupt.", end=' ')

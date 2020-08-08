@@ -19,9 +19,6 @@ class AirspaceManager(AutomatonBase):
 
         self._contr_dict = defaultdict(Contract)  # type: Dict[Hashable, Contract]
         self._reply_set = set()  # type: MutableSet[Hashable]
-        ######################
-        self._failed_uid = set()
-        ######################
 
     def is_internal(self, act: Action) -> bool:
         return act[0] == "marker"
@@ -30,10 +27,7 @@ class AirspaceManager(AutomatonBase):
         return act[0] == "reply"
 
     def is_input(self, act: Action) -> bool:
-        ###################
-        # return act[0] == "request" or act[0] == "release"
-        return act[0] == "request" or act[0] == "release" or act[0] == "fail" 
-        ###################
+        return act[0] == "request" or act[0] == "release"
 
     def invariant(self) -> bool:
         pairwise_values = combinations(self._contr_dict.values(), 2)  # type: Iterator[Tuple[Contract, ...]]
@@ -43,21 +37,14 @@ class AirspaceManager(AutomatonBase):
         if not isinstance(act, tuple) or not bool(act):
             raise ValueError("Action should be a pair but received %s." % act)
 
-        print("Action: ", act)
         if act[0] == "request":
             self._eff_request(**act[1])
             # if not self.invariant():
             #    print("Invariant is violated")
-        #####################################
-        elif act[0] == "fail":
-            self._eff_fail(**act[1])
-        #####################################
         elif act[0] == "reply":
             self._eff_reply(**act[1])
         elif act[0] == "release":
             self._eff_release(**act[1])
-        elif act[0] == "fail":
-            self._eff_fail(**act[1])
         elif self._pre_marker():
             self._eff_marker()
         else:
@@ -70,26 +57,9 @@ class AirspaceManager(AutomatonBase):
 
     def _eff_reply(self, uid: Hashable, acquired: Contract) -> None:
         self._reply_set.remove(uid)
-        ##########################
-        if uid in self._failed_uid:
-            self._failed_uid.remove(uid)
-        ##########################
 
     def _eff_release(self, uid: Hashable, releasable: Contract) -> None:
         self._contr_dict[uid] -= releasable
-
-    ##############################################
-    def _eff_fail(self, uid: Hashable, target: Contract) -> None: #target: Contract
-        self._failed_uid.add(uid)
-        #self._reply_set.add(uid)
-        print("received fail for %s" % str(uid))
-        # if all(self._disjoint_query(target, v) for k, v in self._contr_dict.items() if k != uid):
-        for k, v in self._contr_dict.items():
-            if k != uid and not self._disjoint_query(target, v):
-                self.queries['notifications'] += 1
-        self._contr_dict[uid] = target
-    ##############################################
-    
 
     def _pre_marker(self):
         return bool(self._contr_dict) and self.clk >= self.__deadline
