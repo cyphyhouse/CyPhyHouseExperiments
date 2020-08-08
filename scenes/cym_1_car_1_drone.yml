@@ -1,0 +1,2 @@
+- {bot_name: "device0", bot_type: "f1tenth", init_pos: [-9.0, -9.0, 0.3]}
+- {bot_name: "device1", bot_type: "QUAD", init_pos: [-5.0, -6.0, 0.3]}
