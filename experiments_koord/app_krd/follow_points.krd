@@ -7,7 +7,11 @@ using Motion:
 
 local:
     int tries = 1
-    int p = 10 - 3*pid
+    int p = 9 - 2*pid
+
+init:
+   Motion.target = Motion.position + pos3d(0.0, 0.0, 1.0)
+
 
 event1:
     pre: tries == 1

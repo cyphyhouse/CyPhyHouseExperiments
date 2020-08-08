@@ -1,11 +1,16 @@
 using Motion:
     actuators:
         pos[] path
+        pos target
     sensors:
+        pos position
         boolean reached
 
 local:
     int tries = 1
+
+init:
+   Motion.target = Motion.position + pos3d(0.0, 0.0, 1.0)
 
 event:
     pre: tries == 1
