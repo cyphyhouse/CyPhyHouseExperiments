@@ -1,5 +1,5 @@
 import rospy
-from cyclops import marker_builder
+from cym_gazebo import marker_builder
 from cym_marker.msg import Marker
 
 from src.config.configs import AgentConfig, MoatConfig
