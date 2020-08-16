@@ -44,7 +44,7 @@ class TaskApp(AgentThread):
     def initialize_vars(self):
         self.initialize_lock('pick_route')
         self.agent_gvh.create_aw_var('tasks', list, TaskApp.tasks)
-        self.agent_gvh.create_ar_var('route', list, [self.agent_gvh.moat.position])
+        self.agent_gvh.create_ar_var('route', list, [self.moat.position])
         self.locals['my_task'] = None
         self.locals['test_route'] = None
         self.locals['doing'] = False
@@ -60,13 +60,13 @@ class TaskApp(AgentThread):
 
             if self.lock('pick_route'):
                 self.locals['tasks'] = self.read_from_shared('tasks', None)
-                print("Agent", self.pid(), "at", self.agent_gvh.moat.position,
+                print("Agent", self.pid(), "at", self.moat.position,
                       "has lock. Remaining tasks:",
                       [t.id for t in self.locals['tasks'] if not t.assigned])
                 for i in range(len(self.locals['tasks'])):
                     if not self.locals['tasks'][i].assigned:
                         self.locals['my_task'] = self.locals['tasks'][i]
-                        self.locals['test_route'] = self.agent_gvh.moat.planner.find_path(self.agent_gvh.moat.position,
+                        self.locals['test_route'] = self.moat.planner.find_path(self.moat.position,
                                                                                           self.locals[
                                                                                               'my_task'].location,
                                                                                           self.locals['obstacles'])
@@ -80,9 +80,9 @@ class TaskApp(AgentThread):
                             self.agent_gvh.put('tasks', self.locals['tasks'])
                             self.agent_gvh.put('route', self.locals['test_route'], self.pid())
                             print("Agent", self.pid(), "is going to task", i, "at", self.locals['my_task'].location)
-                            self.agent_gvh.moat.follow_path(self.locals['test_route'])
+                            self.moat.follow_path(self.locals['test_route'])
                         else:
-                            self.agent_gvh.put('route', [self.agent_gvh.moat.position],
+                            self.agent_gvh.put('route', [self.moat.position],
                                                self.pid())
                             self.locals['my_task'] = None
                             self.locals['doing'] = False
@@ -93,7 +93,7 @@ class TaskApp(AgentThread):
                 self.unlock('pick_route')
                 rospy.sleep(0.05)
         else:
-            if self.agent_gvh.moat.reached:
+            if self.moat.reached:
                 if self.locals['my_task'] is not None:
                     self.finish_task_marker()
                     self.locals['my_task'] = None
