@@ -82,7 +82,7 @@ Assume the Koord compiler and middle-ware are already installed.
 Usage
 -----
 
-Change the working directory to `experiments`.
+Change the working directory to `experiments_koord`.
 
 
 ### Apps without Motion module
