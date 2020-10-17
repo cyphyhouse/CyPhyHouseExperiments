@@ -1,3 +1,6 @@
+world_name: "eceb.world"
+
+devices:
 - {bot_name: "drone0", bot_type: "QUAD", init_pos: [-80, -65.5, 0.3]}
 - {bot_name: "drone1", bot_type: "QUAD", init_pos: [-82, -65.5, 0.3]}
 - {bot_name: "drone2", bot_type: "QUAD", init_pos: [-84, -65.5, 0.3]}
