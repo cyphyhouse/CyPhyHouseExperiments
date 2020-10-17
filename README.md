@@ -92,7 +92,7 @@ the `experiment.sh` script under `experiments_koord/`.
 For example, run the following command to execute `addnums` with 1 simulated
 agent
 ```bash
-./experiment.sh app_krd/addnum.krd configs/no_motion_1_drone.global.yml
+./experiment.sh app_krd/addnums.krd configs/no_motion_1_drone.global.yml
 ```
 
 
