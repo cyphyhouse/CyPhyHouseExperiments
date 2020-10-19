@@ -9,6 +9,9 @@ from src.objects.udt import Task
 from src.motion.pos_types import Pos
 
 
+MARKER_Z = 0.05
+
+
 class TaskApp(AgentThread):
 
     tasks = [
@@ -104,19 +107,19 @@ class TaskApp(AgentThread):
     def assign_task_marker(self):
         my_task = self.locals['my_task']
         task_loc = my_task.location
-        marker = add_target_marker('tasks', my_task.id, (task_loc.x, task_loc.y, 0.0))
+        marker = add_target_marker('tasks', my_task.id, (task_loc.x, task_loc.y, MARKER_Z))
         self._pub_marker.publish(marker)
 
     def finish_task_marker(self):
         my_task = self.locals['my_task']
         task_loc = my_task.location
-        marker = add_reached_marker('tasks', my_task.id, (task_loc.x, task_loc.y, 0.0))
+        marker = add_reached_marker('tasks', my_task.id, (task_loc.x, task_loc.y, MARKER_Z))
         self._pub_marker.publish(marker)
 
     def init_all_task_markers(self):
         for task in TaskApp.tasks:
             task_loc = task.location
-            marker = add_init_marker('tasks', task.id, (task_loc.x, task_loc.y, 0.0))
+            marker = add_init_marker('tasks', task.id, (task_loc.x, task_loc.y, MARKER_Z))
             rospy.sleep(0.4)
             self._pub_marker.publish(marker)
 
