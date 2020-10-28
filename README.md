@@ -31,6 +31,29 @@ Or you can find the documentation at:
   https://cyphyhouse.rtfd.io/
 
 
+Cite CyPhyHouse
+---------------
+
+R. Ghosh et al., "CyPhyHouse: A programming, simulation, and deployment toolchain for heterogeneous distributed coordination,"
+*2020 IEEE International Conference on Robotics and Automation (ICRA)*, Paris, France, 2020, pp. 6654-6660,
+doi: 10.1109/ICRA40945.2020.9196513.
+
+```BibTeX
+@INPROCEEDINGS{CyPhyHouse,
+  author={Ritwika Ghosh and Joao P. Jansch-Porto and Chiao Hsieh and 
+          Amelia Gosse and Minghao Jiang and Hebron Taylor and Peter Du and
+          Sayan Mitra and Geir Dullerud},},
+  booktitle={2020 IEEE International Conference on Robotics and Automation (ICRA)}, 
+  title={CyPhyHouse: A programming, simulation, and deployment toolchain for heterogeneous distributed coordination},
+  year={2020},
+  volume={},
+  number={},
+  pages={6654-6660},
+  doi={10.1109/ICRA40945.2020.9196513}
+}
+```
+
+
 License
 -------
 
