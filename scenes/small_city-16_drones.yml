@@ -1,0 +1,19 @@
+world_name: small_city.world
+
+devices:
+- {bot_name: "drone0", bot_type: "QUAD", init_pos: [-73.0, -8.0, 0.3]}
+- {bot_name: "drone1", bot_type: "QUAD", init_pos: [-73.0, -6.0, 0.3]}
+- {bot_name: "drone2", bot_type: "QUAD", init_pos: [-73.0, -4.0, 0.3]}
+- {bot_name: "drone3", bot_type: "QUAD", init_pos: [-73.0, -2.0, 0.3]}
+- {bot_name: "drone4", bot_type: "QUAD", init_pos: [-71.0, -6.0, 0.3]}
+- {bot_name: "drone5", bot_type: "QUAD", init_pos: [-71.0, -4.0, 0.3]}
+- {bot_name: "drone6", bot_type: "QUAD", init_pos: [-71.0, -2.0, 0.3]}
+- {bot_name: "drone7", bot_type: "QUAD", init_pos: [-71.0,  0.0, 0.3]}
+- {bot_name: "drone8", bot_type: "QUAD", init_pos: [-69.0, -8.0, 0.3]}
+- {bot_name: "drone9", bot_type: "QUAD", init_pos: [-69.0, -6.0, 0.3]}
+- {bot_name: "droneA", bot_type: "QUAD", init_pos: [-69.0, -4.0, 0.3]}
+- {bot_name: "droneB", bot_type: "QUAD", init_pos: [-69.0, -2.0, 0.3]}
+- {bot_name: "droneC", bot_type: "QUAD", init_pos: [-67.0, -6.0, 0.3]}
+- {bot_name: "droneD", bot_type: "QUAD", init_pos: [-67.0, -4.0, 0.3]}
+- {bot_name: "droneE", bot_type: "QUAD", init_pos: [-67.0, -2.0, 0.3]}
+- {bot_name: "droneF", bot_type: "QUAD", init_pos: [-67.0,  0.0, 0.3]}
