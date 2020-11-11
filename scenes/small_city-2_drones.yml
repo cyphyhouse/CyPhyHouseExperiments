@@ -1,0 +1,4 @@
+world_name: small_city.world
+devices:
+    - {bot_name: "drone0", bot_type: "QUAD", init_pos: [-40.0, 7.0, 1.0]}
+    - {bot_name: "drone6", bot_type: "QUAD", init_pos: [-41.0, 7.0, 1.0]}
