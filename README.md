@@ -126,7 +126,7 @@ instantiate simulated devices in our Cymulator.
 
 ```bash
 source catkin_ws/devel/setup.bash  # catkin_ws is your workspace for catkin
-rosrun cym_gazebo cymulate.py scenes/cym_5_drones.yml
+rosrun cym_gazebo cymulate.py ../scenes/cym_5_drones.yml
 ```
 
 Similarly, we then go to `experiments_koord/` and use `experiment.sh` to start the experiment.
