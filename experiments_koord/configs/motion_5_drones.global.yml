@@ -34,7 +34,7 @@ devices:
         positioning_topic:
             topic:  '/vrpn_client_node/'  # TODO '"/vrpn_client_node/" + vicon_obj + "/pose"'
             type: PoseStamped  # geometry_msgs/PoseStamped
-        planner: SimplePlanner
+        planner: RRT_STAR_DRONE
         motion_automata: [MoatTestDrone, MoatHectorQuadrotor]
     drone1:
       bot_type: QUAD
