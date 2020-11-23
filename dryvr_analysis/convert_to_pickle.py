@@ -11,8 +11,8 @@ from rosbag_to_dist_trace import DistTrace, process_bag_file
 
 WAYPOINT_TOPIC = "action/pose/goal"
 STATE_TOPIC = "ground_truth/state"
-ROSPointT = NamedTuple("PointT", [('x', float), ('y', float), ('z', float)])
-ROSStateT = NamedTuple("StateT", [
+ROSPointT = NamedTuple("ROSPointT", [('x', float), ('y', float), ('z', float)])
+ROSStateT = NamedTuple("ROSStateT", [
     ('pos_x', float), ('pos_y', float), ('pos_z', float),
     ('ori_x', float), ('ori_y', float), ('ori_z', float), ('ori_w', float),
     ('lin_vel_x', float), ('lin_vel_y', float), ('lin_vel_z', float),
@@ -57,18 +57,18 @@ def dist_trace_to_dryvr_traces(dist_trace: DistTrace) \
     stamped_state_iter = iter(dist_trace[STATE_TOPIC])
 
     ret = []
-    prev_wp = None
+    prev_wp_stamp, prev_wp = -np.inf, ()
     stamp, state = next(stamped_state_iter)
     for wp_stamp, wp in stamped_waypoint_iter:
-        dryvr_mode = prev_wp  # NOTE: Last waypoint will be excluded
-        dryvr_trace = []
-        while stamp <= wp_stamp:
-            dryvr_trace.append(state)
+        dryvr_trace_list = []
+        while stamp < wp_stamp:
+            dryvr_trace_list.append((stamp,) + tuple(state))
             stamp, state = next(stamped_state_iter)
-        dryvr_mode = np.array(dryvr_mode)
-        dryvr_trace = np.array(dryvr_trace)
+        # NOTE: Last waypoint is automatically excluded due to this line using previous waypoints
+        dryvr_mode = np.array((prev_wp_stamp,) + tuple(prev_wp))
+        dryvr_trace = np.array(dryvr_trace_list)
         ret.append((dryvr_mode, dryvr_trace))
-        prev_wp = wp
+        prev_wp_stamp, prev_wp = wp_stamp, wp
     ret = ret[1:]  # Remove the first trace
     return ret
 
