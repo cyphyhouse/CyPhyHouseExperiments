@@ -28,6 +28,7 @@ LICENSE text
 
 # Denote all files that are truly binary and should not be modified.
 *.bag binary
+*.pickle binary
 *.png binary
 *.jpg binary
 *.pdf binary
