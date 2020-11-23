@@ -65,6 +65,10 @@ Installation
 ============
 
 1. Follow the instruction at https://github.com/cyphyhouse/Cymulator to install Cymulator. We assume the catkin workspace is under `catkin_ws`.
+
+   - (Optional) Follow the instruction at https://github.com/chaolmu/gazebo_models_worlds_collection to download and install
+     additional Gazebo simulation worlds for better looking scenes.
+
 1. Clone and install CyPyHous3 middleware under any directory (does not need to be in `catkin_ws`).
    ```shell
    git clone https://github.com/cyphyhouse/CyPyHous3.git --branch for-cymulator  # Clone the repo with the for-cymulator branch
@@ -92,31 +96,17 @@ If the installation fails please make sure the following packages are installed:
 - `ros-kinetic-hector-localization ros-kinetic-hector-models`
 - `ros-kinetic-geometry2 ros-kinetic-robot`
 - `libyaml-cpp-dev`
--  Java version 1.11 (needed for using koord language)
+-  Java version 1.11 (needed for using Koord language)
 - `netifaces`
 - `defusedxml`
 
 
-Run experiment scripts
-======================
+Run experiment scripts for Koord applications
+=============================================
 
 Assume the Koord compiler and middle-ware are already installed.
 
-Usage
------
-
 Change the working directory to `experiments_koord`.
-
-
-### Apps without Motion module
-
-To execute a Koord program that does not require the Motion module, simply use
-the `experiment.sh` script under `experiments_koord/`.
-For example, run the following command to execute `addnums` with 1 simulated
-agent
-```bash
-./experiment.sh app_krd/addnums.krd configs/no_motion_1_drone.global.yml
-```
 
 
 ### Apps with Motion module
@@ -129,9 +119,21 @@ source catkin_ws/devel/setup.bash  # catkin_ws is your workspace for catkin
 rosrun cym_gazebo cymulate.py ../scenes/cym_5_drones.yml
 ```
 
-Similarly, we then go to `experiments_koord/` and use `experiment.sh` to start the experiment.
+We then use `experiment.sh` to start the experiment in another terminal.
 For example, run the following command to execute `lineform` with 5 simulated
-agents
+agents in another terminal.
+
 ```bash
+source catkin_ws/devel/setup.bash  # catkin_ws is your workspace for catkin
 ./experiment.sh app_krd/lineform.krd configs/motion_5_drones.global.yml
 ```
+
+More applications and experiment instructions can be found under the `experiments_koord` folder.
+
+
+Run experiment scripts for UAV Traffic Managements (UTM)
+========================================================
+
+Change the working directory to `experiments_utm`.
+
+**TODO**
