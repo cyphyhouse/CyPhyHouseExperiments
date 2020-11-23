@@ -14,12 +14,39 @@ Platform-Dependent Analysis on Motion using DryVR
      It contains the ground truth state provided by Gazebo.
      A state includes position, orientation, linear velocity and angular velocity of the vehicle model.
 
-#. Generate traces for DryVR from a raw ROS bag trace
+#. Generate traces for DryVR from a raw ROS bag trace and store as a Python pickle file.
 
    * The sequence of timestamped states is divided into segments based on the timestamp of each waypoint.
      We **assume** a segment is the behavior of the black-box dynamical system under the mode specified by the waypoint,
      and the initial state is the last sampled state at or before the timestamp of the waypoint.
-   * TODO
+   * The output for each bag file is a sequence of pairs of one waypoint and one trace.
+   * The output is stored as a pickle file to remove dependency on ROS packages in the following steps.
+
+#. Compute reachtube using DryVR
+
+    * TODO
+
+
+******
+Usages
+******
+
+#. Collect ROS bags.
+   To customize the simulation, look into the arguments for ``test_hector_quad_random_waypoints.launch``
+   in our ``cym_device`` package.
+
+   .. code-block:: shell
+
+      ./collect_rosbag_trace.sh
+
+#. Convert ROS bags to Python pickle files.
+   Given a input file named ``file.bag``, it generates an output file named ``file.bag.pickle``.
+
+   .. code-block:: shell
+
+      ./convert_to_pickle.py bags/follow_waypoints_2020-11-20-12-03-57.bag
+
+#. Generate reachtube. TODO
 
 
 .. note::
