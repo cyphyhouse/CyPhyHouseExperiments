@@ -32,6 +32,10 @@ Platform-Dependent Analysis on Motion using DryVR
 Usages
 ******
 
+Due to the large size of the binary files, we provide only a small example here on GitHub.
+Our collected ROS bag files and generated Python pickle files are available at
+`our Google Drive <https://drive.google.com/drive/folders/1cJUD-M4f6GuaEvkgcd8e1Cj_yukn4DEF?usp=sharing>`_.
+
 #. Collect ROS bags.
    To customize the simulation, look into the arguments for ``test_hector_quad_random_waypoints.launch``
    in our ``cym_device`` package.
