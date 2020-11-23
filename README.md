@@ -128,7 +128,7 @@ source catkin_ws/devel/setup.bash  # catkin_ws is your workspace for catkin
 ./experiment.sh app_krd/lineform.krd configs/motion_5_drones.global.yml
 ```
 
-More applications and experiment instructions can be found under the `experiments_koord` folder.
+**More applications and experiment instructions can be found under the `experiments_koord` folder.**
 
 
 Run experiment scripts for UAV Traffic Managements (UTM)

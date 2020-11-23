@@ -45,5 +45,6 @@ source catkin_ws/devel/setup.bash  # catkin_ws is your workspace for catkin
 ```
 
 The Gazebo simulation looks like the GIF below.
+
 ![Warehouse Delivery](/docs/warehouse-delivery-sim.gif)
  
