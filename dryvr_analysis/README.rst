@@ -45,7 +45,7 @@ Usages
 
    .. code-block:: shell
 
-      ./convert_to_pickle.py bags/follow_waypoints_2020-11-20-12-03-57.bag
+      ./convert_to_pickle.py bags/*.bag
 
 #. Generate reachtube. TODO
 
