@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import pickle
 from typing import Any, NamedTuple, Sequence, Tuple
 
 import numpy as np
@@ -73,13 +74,13 @@ def dist_trace_to_dryvr_traces(dist_trace: DistTrace) \
 
 
 def main(argv: Any) -> None:
-    dist_trace_seq = tuple(process_bag_file(bag_file_name, TOPIC_TO_CB)[1]
-                           for bag_file_name in argv.bag_file)
+    dist_trace_iter = (process_bag_file(bag_file_name, TOPIC_TO_CB)
+                       for bag_file_name in argv.bag_file)
 
-    for dist_trace in dist_trace_seq:
+    for file_name, dist_trace in dist_trace_iter:
         mode_trace_seq = dist_trace_to_dryvr_traces(dist_trace)
-        print([len(trace) for mode, trace in mode_trace_seq])
-        # TODO call DryVR to compute reach-tube
+        with open(file_name + ".pickle", 'wb') as f:
+            pickle.dump(mode_trace_seq, f)
 
 
 if __name__ == "__main__":
