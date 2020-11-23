@@ -49,6 +49,10 @@ Usages
 
 #. Generate reachtube. TODO
 
+   .. code-block:: shell
+
+      ./compute_reachtube.py bags/*.pickle
+
 
 .. note::
 
