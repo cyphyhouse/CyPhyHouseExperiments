@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 from matplotlib.ticker import MultipleLocator
 from matplotlib.patches import Rectangle
 
-from reach_compute import get_discrepancy_parameters, get_reachtube
+from dryvr_core import get_discrepancy_parameters, get_reachtube
 
 
 def rosplane_trace_filter(stamped_mode: np.ndarray, trace: np.ndarray) -> bool:
