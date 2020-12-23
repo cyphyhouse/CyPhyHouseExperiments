@@ -13,14 +13,14 @@ The structure of this directory is as follows:
   instructions to automatically prove the invariant. 
 
 * **Reachability Analysis**:
-   `drvy_analysis/` contains scripts and instructions to generate simulation traces, compute reachtube
+   `../drvy_analysis/` contains scripts and instructions to generate simulation traces, compute reachtube
    using DryVR reachability analysis, and plot the reachtubes.
 
 * **Performance Evaluation**:
 
   + `dist_mutex_contr/` contains the Python implementation of our UTM protocol for simulation with the CyPhyHouse Cymulator.  
   + `eceb_scenarios.py` defines waypoints each agent has to follow in different simulation scenarios.
-  + `test_protococ.py` is the entry point to run the simulation with a selected scenario.
+  + `test_protocol.py` is the entry point to run the simulation with a selected scenario.
   + `results/` contains the experiment result collected for all scenarios discussed in our paper as well as
     the script to process the result and generate csv files for plotting using Latex.
 

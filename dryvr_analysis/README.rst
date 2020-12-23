@@ -27,7 +27,11 @@ Platform-Dependent Analysis on Motion using DryVR
 
 #. Compute reachtube using DryVR
 
-    * TODO
+   * We group the trace segments of the same mode.
+   * We select one trace as the center trace to compute a radius such that it covers the initial states of all traces.
+     This represents the initial set of states for computing reachtube.
+   * We compute the discrepancy function with the group of traces using DryVR.
+     This discrepancy function can be reused to construct reachtube for a different trace of the same mode.
 
 
 ******
@@ -53,7 +57,7 @@ Our collected ROS bag files and generated Python pickle files are available at
 
       ./convert_to_pickle.py bags/*.bag
 
-#. Generate reachtube. TODO
+#. Generate reachtube using DryVR and plot reachtube projected to (x,y)-plane and (z,time)-plane.
 
    .. code-block:: shell
 
