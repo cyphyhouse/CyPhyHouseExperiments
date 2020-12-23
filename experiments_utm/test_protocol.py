@@ -160,12 +160,9 @@ def test_protocol(scenario) -> None:
 
 if __name__ == "__main__":
     try:
-        # TODO make them individual test files
-        # test_agent()
-        # test_contract_manager()
-        subset = eceb_scenarios.SIMPLE_CORRIDOR.keys()
-        sc = {key: val for key, val in eceb_scenarios.SIMPLE_CORRIDOR.items()
-              if key in subset}
+        selected_scenario = eceb_scenarios.SIMPLE_CORRIDOR
+        selected_agents = {'drone0', 'drone1', 'drone2', 'drone3', 'drone4', 'drone5'}
+        sc = {key: val for key, val in selected_scenario.items() if key in selected_agents}
         print(datetime.datetime.now().replace(microsecond=0).isoformat(), ':')
         test_protocol(sc)
     except KeyboardInterrupt:

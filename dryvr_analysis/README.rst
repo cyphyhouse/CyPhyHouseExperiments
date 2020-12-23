@@ -19,9 +19,11 @@ Platform-Dependent Analysis on Motion using DryVR
    * The sequence of timestamped states is divided into segments based on the timestamp of each waypoint.
      We **assume** a segment is the behavior of the black-box dynamical system under the mode specified by the waypoint,
      and the initial state is the first sampled state *at or after* the timestamp of the waypoint.
+     The trace segment for this waypoint is the sequence of sampled states starting from the initial state of this waypoint,
+     and ending at the state before the initial state of the next waypoint.
    * The output for each bag file is a sequence of pairs.
-     Each pair consists of one stamped waypoint and one trace of stamped states.
-   * The output is stored as a pickle file to remove dependency on ROS packages in the following steps.
+     Each pair consists of one stamped waypoint and one trace segment of stamped states.
+   * The output is stored as a pickle file to remove dependency on ROS packages for the next steps.
 
 #. Compute reachtube using DryVR
 

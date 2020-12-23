@@ -34,10 +34,14 @@ Or you can find the documentation at:
 Cite CyPhyHouse
 ---------------
 
-R. Ghosh et al., "CyPhyHouse: A programming, simulation, and deployment toolchain for heterogeneous distributed coordination,"
+### Plain Text
+
+R. Ghosh et al., "CyPhyHouse: A programming, simulation, and deployment toolchain for heterogeneous distributed coordination",
 *2020 IEEE International Conference on Robotics and Automation (ICRA)*, Paris, France, 2020, pp. 6654-6660,
 doi: 10.1109/ICRA40945.2020.9196513.
 
+
+### BibTex
 ```BibTeX
 @INPROCEEDINGS{CyPhyHouse,
   author={Ritwika Ghosh and Joao P. Jansch-Porto and Chiao Hsieh and 
@@ -64,22 +68,32 @@ CyPhyHouseExperiments is licensed under the terms of the NCSA License (see the f
 Installation
 ============
 
-1. Follow the instruction at https://github.com/cyphyhouse/Cymulator to install Cymulator. We assume the catkin workspace is under `catkin_ws`.
+1. Follow the instruction at https://github.com/cyphyhouse/Cymulator to install Cymulator.
+   We assume the catkin workspace is under `catkin_ws`.
 
    - (Optional) Follow the instruction at https://github.com/chaolmu/gazebo_models_worlds_collection to download and install
      additional Gazebo simulation worlds for better looking scenes.
 
-1. Clone and install CyPyHous3 middleware under any directory (does not need to be in `catkin_ws`).
+2. Clone this CyPhyHouseExperiments repository under any directory (does not need to be in the `catkin_ws`):
+   ```
+   git clone https://github.com/cyphyhouse/CyPhyHouseExperiments
+   ```
+
+Install Packages for Koord Experiments
+--------------------------------------
+
+Following steps are required only for using Koord language compiler and middleware to run Koord experiments.
+You can skip these steps if you want to run other experiments such as UTM experiments,
+and check the specific directory for more instructions. 
+
+3. Download the latest version of the [koord langauge](https://github.com/cyphyhouse/KoordLanguage/releases)
+   - place `koord-0.1-jar-with-dependencies.jar` inside `CyPhyHouseExperiments/experiments_koord` folder
+
+4. Clone and install CyPyHous3 middleware under any directory (does not need to be in `catkin_ws`).
    ```shell
    git clone https://github.com/cyphyhouse/CyPyHous3.git --branch for-cymulator  # Clone the repo with the for-cymulator branch
    pip3 install --user -e CyPyHous3/
    ```
-1. Clone this CyPhyHouseExperiments repository under any directory (does not need to be in the `catkin_ws`):
-   ```
-   git clone https://github.com/cyphyhouse/CyPhyHouseExperiments
-   ```
-1. Download the latest version of the [koord langauge](https://github.com/cyphyhouse/KoordLanguage/releases)
-   - place `koord-0.1-jar-with-dependencies.jar` inside `CyPhyHouseExperiments/experiments_koord` folder
 
   
 Installation Help
@@ -129,11 +143,3 @@ source catkin_ws/devel/setup.bash  # catkin_ws is your workspace for catkin
 ```
 
 **More applications and experiment instructions can be found under the `experiments_koord` folder.**
-
-
-Run experiment scripts for UAV Traffic Managements (UTM)
-========================================================
-
-Change the working directory to `experiments_utm`.
-
-**TODO**
