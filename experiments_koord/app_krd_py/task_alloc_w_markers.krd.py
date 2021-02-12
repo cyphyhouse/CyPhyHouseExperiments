@@ -15,24 +15,24 @@ MARKER_Z = 0.05
 class TaskApp(AgentThread):
 
     tasks = [
-        Task(Pos((4*pos[0], 4*pos[1], pos[2])), i, False, None)
+        Task(Pos((pos[0], pos[1], pos[2])), i, False, None)
         for i, pos in enumerate([
-            (1.75, 1.75, 0),
-            (0, 2, 0),
-            (-2, 2, 0),
-            (-2, -2, 0),
-            (0.25, -2, 1),
-            (2, 0, 0),
-            (1.75, -1.75, 0),
-            (2, 1.75, 1),
-            (0.25, 2, 1.25),
-            (-2, 0.25, 1.25),
-            (0, 0.25, 1.5),
-            (1, -1, 1),
-            (0, -2, 0),
-            (-2, 0, 0),
-            (-1.75, 2, 1.5),
-            (-2, -1.75, 1.15),
+            (7, 7, 0),
+            (0, 8, 0),
+            (-8, 8, 0),
+            (-8, -8, 0),
+            (1, -8, 1),
+            (8, 0, 0),
+            (7, -7, 0),
+            (8, 7, 1),
+            (1, 8, 1.25),
+            (-8, 1, 1.25),
+            (0, 1, 1.5),
+            (4, -4, 1),
+            (0, -8, 0),
+            (-8, 0, 0),
+            (-7, 8, 1.5),
+            (-8, -7, 1.15),
         ])
     ]
 
@@ -43,6 +43,13 @@ class TaskApp(AgentThread):
                                            latch=True)
         if self.agent_gvh.is_leader:
             self.init_all_task_markers()
+
+        self.moat.planner.min_rand = -9.0
+        self.moat.planner.max_rand = 9.0
+        self.moat.planner.min_zrand = 0.0
+        self.moat.planner.max_zrand = 2.0
+        self.moat.planner.expand_dis = 6.0
+        self.moat.planner.max_iter = 200
 
     def initialize_vars(self):
         self.initialize_lock('pick_route')
