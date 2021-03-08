@@ -12,7 +12,7 @@ and proven automatically by [Dione verfier](https://github.com/cyphyhouse/dione)
  i  j≠i
 ```
 
-The automaton with the invariant can be found in [`UTMAirspaceManager.dione`](UTMAirspaceManager.dione).
+The automaton with the invariant can be found in [`UTMAirspaceManager.ioa`](UTMAirspaceManager.ioa).
 
 Assuming Dione verifier is downloaded and installed, we use the following command to prove the invariant.
 ```shell
