@@ -56,7 +56,7 @@ The following steps are for a simulation in the default scenario where six drone
 2. In another terminal, run the following script to start the simulation with the default scenario.
    ```shell
    source catkin_ws/devel/setup.bash  # catkin_ws is your workspace for catkin
-   python3 test_protocol.py
+   python3 test_protocol.py ../scenes/simple_corridor.yml
    ```
 
 You should see a simulation similar to the following.

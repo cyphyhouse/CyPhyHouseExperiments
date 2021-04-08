@@ -93,8 +93,7 @@ def test_protocol(scenario: Dict[str, Tuple[MotionInitInfo, List]]) -> None:
 
 def __build_argparser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Create formulas for proving system using assume-guarantee contracts"
-                    "and output to SMT-lib file"
+        description="Run UTM protocol with the given scene and scenarios"
     )
     parser.add_argument('scene', type=argparse.FileType('r'),
                         help="Yaml file of the scene with vehicle types and positions")
