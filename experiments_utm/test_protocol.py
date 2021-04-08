@@ -1,82 +1,13 @@
 import datetime
-from multiprocessing import Event, Manager, Pipe, Process
+from multiprocessing import Manager, Process
 from queue import Empty, Queue
 from typing import List, Sequence, Tuple
-
-from reachtube import Contract
-from scipy.spatial import Rectangle
 
 from dist_mutex_contr.airspace_manager import AirspaceManager
 from dist_mutex_contr.agent import Agent
 from dist_mutex_contr.motion import MotionHectorQuad
 from dist_mutex_contr.tioa_base import run_as_process
 import eceb_scenarios
-
-
-def test_agent() -> None:
-    stop_ev = Event()
-    conn, agent_conn = Pipe()
-
-    aut = Agent(uid=1, motion=MotionHectorQuad("/drone1"))
-
-    p = Process(target=run_as_process, kwargs={"aut": aut,
-                                               "conn": agent_conn,
-                                               "stop_ev": stop_ev})
-    p.start()
-
-    try:
-        for i in range(10):
-            if conn.poll(1.0):
-                act = conn.recv()
-                print(act)
-                if act[0] == "request":
-                    reply = input("> ")
-                    conn.send(("reply", {"uid": aut.uid,
-                                         "acquired": Contract()}))
-            else:
-                print("Response timeout")
-    finally:
-        stop_ev.set()  # Stop all automatons
-        p.join()
-        conn.close()
-        agent_conn.close()
-
-
-def test_contract_manager() -> None:
-    aut = AirspaceManager()
-    stop_ev = Event()
-    conn, manager_conn = Pipe()
-
-    p = Process(target=run_as_process, kwargs={"aut": aut,
-                                               "conn": manager_conn,
-                                               "stop_ev": stop_ev})
-    p.start()
-    try:
-        uid = 0
-        for i in range(10):
-            if conn.poll(1.0):
-                act = conn.recv()
-                print(act)
-            elif i % 3 != 2:
-                uid = i % 5
-                target = Contract.from_stamped_rectangles([
-                    (0.0, Rectangle(mins=[0, 0, 0], maxes=[1, 1, 0.5])),
-                    (0.5, Rectangle(mins=[0, 0.5, 0], maxes=[2, 3, 0.5])),
-                    (1.0, Rectangle(mins=[0.5, 0.5, 1.0], maxes=[1.5, 1.5, 1.5]))
-                    ])
-                conn.send(("request", {"uid": uid, "target": target}))
-            else:
-                releasable = Contract.from_stamped_rectangles([
-                    (0.0, Rectangle(mins=[0, 0, 0], maxes=[1, 1, 0.5])),
-                    (0.5, Rectangle(mins=[0, 0.5, 0], maxes=[2, 2, 0.5]))
-                    ])
-                print("Agent " + str(uid) + " release > " + str(releasable))
-                conn.send(("release", {"uid": uid, "releasable": releasable}))
-    finally:
-        stop_ev.set()  # Stop all automatons
-        p.join()
-        conn.close()
-        manager_conn.close()
 
 
 def _multicast(mgr_queue_pair, agent_queue_list: List[Tuple[Queue, Queue]]) -> Sequence[bytes]:
