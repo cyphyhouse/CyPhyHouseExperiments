@@ -1,11 +1,13 @@
+import argparse
 import datetime
 from multiprocessing import Manager, Process
 from queue import Empty, Queue
-from typing import List, Sequence, Tuple
+from typing import List, Sequence, Tuple, Dict, Any
+import yaml
 
 from dist_mutex_contr.airspace_manager import AirspaceManager
 from dist_mutex_contr.agent import Agent
-from dist_mutex_contr.motion import MotionHectorQuad
+from dist_mutex_contr.motion import build_motion_controller, MotionInitInfo
 from dist_mutex_contr.tioa_base import run_as_process
 import eceb_scenarios
 
@@ -32,7 +34,7 @@ def _multicast(mgr_queue_pair, agent_queue_list: List[Tuple[Queue, Queue]]) -> S
     return act_list
 
 
-def test_protocol(scenario) -> None:
+def test_protocol(scenario: Dict[str, Tuple[MotionInitInfo, List]]) -> None:
     sync_mgr = Manager()
     stop_ev = sync_mgr.Event()
 
@@ -44,8 +46,8 @@ def test_protocol(scenario) -> None:
                                    "o_queue": air_mgr_o_queue,
                                    "stop_ev": stop_ev})
 
-    agent_list = [Agent(uid, MotionHectorQuad(uid), wps)
-                  for uid, wps in scenario.items()]
+    agent_list = [Agent(uid, build_motion_controller(init_info), wps)
+                  for uid, (init_info, wps) in scenario.items()]
     agent_proc_list = []  # type: List[Process]
     agent_queue_list = []  # type: List[Tuple[Queue, Queue]]
     for aut in agent_list:
@@ -89,13 +91,57 @@ def test_protocol(scenario) -> None:
                sum(act[0] == "release" for act in act_list)))
 
 
+def __build_argparser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Create formulas for proving system using assume-guarantee contracts"
+                    "and output to SMT-lib file"
+    )
+    parser.add_argument('scene', type=argparse.FileType('r'),
+                        help="Yaml file of the scene with vehicle types and positions")
+    return parser
+
+
+def __process_scene_yaml(fd) -> Dict[str, Dict[str, MotionInitInfo]]:
+    cfg = yaml.safe_load(fd)
+    if isinstance(cfg, list):
+        world_name = "irl_arena.world"
+        cfg_devices = cfg  # type: Sequence[Dict[str, Any]]
+    elif isinstance(cfg, dict):
+        world_name = cfg['world_name']
+        cfg_devices = cfg['devices']
+    else:
+        raise ValueError("Unexpected value in YAML file")
+
+    return {dev["bot_name"]: MotionInitInfo(
+                bot_name=dev["bot_name"],
+                bot_type=dev["bot_type"],
+                position=tuple(dev["init_pos"]),
+                yaw=dev.get("init_yaw", 0.0),
+                topic_prefix=dev["bot_name"]
+            ) for dev in cfg_devices}
+
+
+def main(argv=None):
+    parser = __build_argparser()
+    if argv is None:
+        argv = parser.parse_args()
+    else:
+        argv = parser.parse_args(argv)
+
+    selected_scenario = eceb_scenarios.SIMPLE_CORRIDOR
+    selected_agents = {'drone0', 'drone1', 'drone2', 'drone3', 'drone4', 'drone5'}
+
+    # Include device init info from scene yaml file into scenarios
+    device_info_map = __process_scene_yaml(argv.scene)
+
+    sc = {key: (device_info_map[key], wps) for key, wps in selected_scenario.items() if key in selected_agents}
+    print(datetime.datetime.now().replace(microsecond=0).isoformat(), ':')
+    test_protocol(sc)
+
+
 if __name__ == "__main__":
     try:
-        selected_scenario = eceb_scenarios.SIMPLE_CORRIDOR
-        selected_agents = {'drone0', 'drone1', 'drone2', 'drone3', 'drone4', 'drone5'}
-        sc = {key: val for key, val in selected_scenario.items() if key in selected_agents}
-        print(datetime.datetime.now().replace(microsecond=0).isoformat(), ':')
-        test_protocol(sc)
+        main()
     except KeyboardInterrupt:
         print("KeyboardInterrupt.")
     finally:

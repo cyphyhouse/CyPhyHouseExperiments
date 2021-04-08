@@ -9,7 +9,7 @@ from reachtube.drone3d_types import Contract
 from scipy.spatial import Rectangle
 from scipy.spatial.distance import euclidean
 
-from .motion import MotionHectorQuad
+from .motion import MotionBase
 from .tioa_base import Action, AutomatonBase
 
 StampT = float
@@ -31,7 +31,7 @@ class Agent(AutomatonBase):
         RELEASING = 5
         STOPPING = 6
 
-    def __init__(self, uid: Hashable, motion: MotionHectorQuad, waypoints: List):
+    def __init__(self, uid: Hashable, motion: MotionBase, waypoints: List):
         super(Agent, self).__init__()
 
         self.__uid = uid  # Set it as private to avoid being modified
@@ -68,7 +68,7 @@ class Agent(AutomatonBase):
         return self.__uid
 
     @property
-    def motion(self) -> MotionHectorQuad:
+    def motion(self) -> MotionBase:
         return self.__motion
 
     def is_internal(self, act: Action) -> bool:

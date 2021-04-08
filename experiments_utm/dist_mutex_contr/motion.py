@@ -1,7 +1,8 @@
+import abc
 from copy import deepcopy
 from enum import Enum
 from threading import RLock
-from typing import Tuple, Union
+from typing import Mapping, NamedTuple, Tuple, Type, Union
 
 from actionlib import GoalStatus, SimpleActionClient, SimpleGoalState
 from geometry_msgs.msg import Point, PoseStamped, Quaternion
@@ -10,18 +11,37 @@ from hector_uav_msgs.msg import LandingAction, LandingGoal, \
 import rospy
 
 
-class MotionHectorQuad:
+MotionInitInfo = NamedTuple(
+    "MotionInitInfo",
+    [("bot_name", str), ("bot_type", str), ("topic_prefix", str), ("position", tuple), ("yaw", float)]
+)
+
+
+class MotionBase(abc.ABC):
+    def __init__(self, device_init_info: MotionInitInfo):
+        self._device_init_info = device_init_info
+
+
+class MotionROSplane(MotionBase):
+    def __init__(self, device_init_info: MotionInitInfo):
+        super(MotionROSplane, self).__init__(device_init_info)
+        # TODO Add your implementation
+
+
+class MotionHectorQuad(MotionBase):
     class Status(Enum):
         STAYING = 0
         MOVING = 1
 
-    def __init__(self, topic_prefix: str):
+    def __init__(self, device_init_info: MotionInitInfo):
+        super(MotionHectorQuad, self).__init__(device_init_info)
         self._status = self.Status.STAYING
 
         self._var_lock = RLock()
-        self._position = (0.0, 0.0, 0.0)
+        self._position = self._device_init_info.position  # type: Tuple[float, float, float]
         self._orientation = (0.0, 0.0, 0.0, 1.0)
 
+        topic_prefix = self._device_init_info.topic_prefix
         takeoff_topic = rospy.resolve_name(topic_prefix + "/action/takeoff")
         self._takeoff_client = SimpleActionClient(takeoff_topic, TakeoffAction)
         landing_topic = rospy.resolve_name(topic_prefix + "/action/landing")
@@ -99,3 +119,17 @@ class MotionHectorQuad:
                 goal=goal, execute_timeout=deadline - rospy.Time.now())
 
         return status == GoalStatus.SUCCEEDED
+
+
+MOTION_CLASS_MAP = {
+    "QUAD": MotionHectorQuad,
+    "PLANE": MotionROSplane
+}  # type: Mapping[str, Type[MotionBase]]
+
+
+def build_motion_controller(init_info: MotionInitInfo) -> MotionBase:
+    try:
+        motion_class = MOTION_CLASS_MAP[init_info.bot_type.upper()]
+        return motion_class(init_info)
+    except KeyError:
+        raise ValueError("Unknown vehicle type '%s' for '%s'" % (init_info.bot_type, init_info.bot_name))
