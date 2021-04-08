@@ -66,7 +66,7 @@ Our collected ROS bag files and generated Python pickle files are available at
 
 .. note::
 
-    Currently all scripts under this folder are only for Hector Quadrotor model in Gazebo simulation.
+    Currently all scripts under this folder in default settings are for Hector Quadrotor model in Gazebo simulation.
     In particular, we use the builtin PID-based position controller with the following PID parameter values.
 
     .. code-block:: yaml
@@ -80,3 +80,6 @@ Our collected ROS bag files and generated Python pickle files are available at
 
     See https://github.com/tu-darmstadt-ros-pkg/hector_quadrotor for Hector Quadrotor,
     and check ``hector_quadrotor_controllers/params/controller.yaml`` for configuring PID values.
+
+    To work with ROSplane model, please create a new GitHub issue assigned to Chiao Hsieh or contact through
+    <chsieh16 AT illinois.edu>.
