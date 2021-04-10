@@ -8,7 +8,10 @@ from actionlib import GoalStatus, SimpleActionClient, SimpleGoalState
 from geometry_msgs.msg import Point, PoseStamped, Quaternion
 from hector_uav_msgs.msg import LandingAction, LandingGoal, \
     PoseAction, PoseGoal, TakeoffAction, TakeoffGoal
+from rosplane_msgs.msg import Waypoint, State, Current_Path
 import rospy
+import numpy as np
+
 
 
 MotionInitInfo = NamedTuple(
@@ -26,6 +29,65 @@ class MotionROSplane(MotionBase):
     def __init__(self, device_init_info: MotionInitInfo):
         super(MotionROSplane, self).__init__(device_init_info)
         # TODO Add your implementation
+        #self._status = self.Status.STAYING
+        self._var_lock = RLock()
+        self._position = (0.0, 0.0, 0.0)
+        self._orientation = (0.0, 0.0, 0.0, 1.0)
+
+        topic_prefix = self._device_init_info.topic_prefix
+        self._first_flag = 1
+        self._pose_client = rospy.Publisher(topic_prefix+"/waypoint_path", Waypoint, queue_size=10)
+        self._init_info = device_init_info
+
+    @property
+    def position(self) -> Tuple[float, float, float]:
+        with self._var_lock:
+            # Return copy to avoid multiple threads accessing the same reference
+            return deepcopy(self._position)
+
+    @position.setter
+    def position(self, p: Union[Point, Tuple[float, float, float]]) -> None:
+        if isinstance(p, Point):
+            p = (p.x, p.y, p.z)
+
+        # NOTE the lock may be redundant because assigning references should be atomic
+        with self._var_lock:
+            self._position = p
+
+    @property
+    def orientation(self) -> Tuple[float, float, float, float]:
+        with self._var_lock:
+            # Return copy to avoid multiple threads accessing the same reference
+            return deepcopy(self._orientation)
+
+    @orientation.setter
+    def orientation(self, p: Union[Quaternion, Tuple[float, float, float, float]]) -> None:
+        if isinstance(p, Quaternion):
+            p = (p.x, p.y, p.z, p.w)
+
+        # NOTE the lock may be redundant because assigning references should be atomic
+        with self._var_lock:
+            self._orientation = p
+
+    def send_target(self, point: Tuple[float, float, float]):
+      
+        target_pose = Waypoint()
+        target_pose.w[0] = np.float32(point[0]- self._init_info[3][0])
+        target_pose.w[1] = -(np.float32(point[1]- self._init_info[3][1]))
+        target_pose.w[2] = np.float32(-point[2])
+        target_pose.chi_d = 0
+        target_pose.chi_valid = False
+        target_pose.Va_d  = 12
+
+        if(self._first_flag == 1):
+            target_pose.set_current = True 
+            print("first")
+            self._first_flag = 0
+        else:
+            target_pose.set_current = False
+        # NOTE Do not wait for result   
+        print("sending waypoints")
+        return self._pose_client.publish(target_pose)
 
 
 class MotionHectorQuad(MotionBase):
