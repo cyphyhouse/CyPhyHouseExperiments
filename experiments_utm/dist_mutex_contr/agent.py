@@ -144,9 +144,11 @@ class Agent(AutomatonBase):
                 self._curr_contr = acquired
                 self._status = Agent.Status.MOVING
 
-                tgt = self.__way_points.pop(0)
-                rospy.logdebug("%s going to %s." % (self, str(tgt)))
-                self._target = tgt
+                rospy.logdebug("%s sending all waypoints %s." % (self, self.__way_points))
+                for tgt in self.__way_points:
+                    rospy.sleep(0.5)
+                    self._target = tgt
+                self.__way_points.clear()
             else:
                 # Not enough contract for the plan. Keep only current contracts
                 self._free_contr = acquired - self._curr_contr
@@ -163,10 +165,8 @@ class Agent(AutomatonBase):
         prev = self._plan.pop(0)
         self._plan_contr = self.__plan_to_contr(self._plan)
 
-        if prev.reaching_wp and self.__way_points:
-            tgt = self.__way_points.pop(0)
-            rospy.logdebug("%s going to %s." % (self, str(tgt)))
-            self._target = tgt
+        if prev.reaching_wp:
+            rospy.logdebug("%s going to next region %s." % (self, prev.rect))
 
     def _pre_succeed(self) -> bool:
         return self._status == Agent.Status.MOVING and len(self._plan) == 1 \
