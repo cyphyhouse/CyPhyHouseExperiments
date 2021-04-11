@@ -128,7 +128,10 @@ def main(argv=None):
         argv = parser.parse_args(argv)
 
     selected_scenario = eceb_scenarios.SIMPLE_CORRIDOR
-    selected_agents = {'plane0','drone0','drone1'}
+    selected_agents = {'plane0',
+                       #'drone0',
+                       'drone1'
+                       }
 
     # Include device init info from scene yaml file into scenarios
     device_info_map = __process_scene_yaml(argv.scene)
