@@ -1,7 +1,7 @@
 import argparse
 import datetime
-from multiprocessing import Manager, Process
-from queue import Empty, Queue
+from multiprocessing import Event, Process, Queue
+from queue import Empty
 from typing import List, Sequence, Tuple, Dict, Any
 import yaml
 
@@ -35,11 +35,10 @@ def _multicast(mgr_queue_pair, agent_queue_list: List[Tuple[Queue, Queue]]) -> S
 
 
 def test_protocol(scenario: Dict[str, Tuple[MotionInitInfo, List]]) -> None:
-    sync_mgr = Manager()
-    stop_ev = sync_mgr.Event()
+    stop_ev = Event()
 
     air_mgr = AirspaceManager()
-    air_mgr_i_queue, air_mgr_o_queue = sync_mgr.Queue(), sync_mgr.Queue()
+    air_mgr_i_queue, air_mgr_o_queue = Queue(), Queue()
     air_mgr_proc = Process(target=run_as_process,
                            kwargs={"aut": air_mgr,
                                    "i_queue": air_mgr_i_queue,
@@ -51,7 +50,7 @@ def test_protocol(scenario: Dict[str, Tuple[MotionInitInfo, List]]) -> None:
     agent_proc_list = []  # type: List[Process]
     agent_queue_list = []  # type: List[Tuple[Queue, Queue]]
     for aut in agent_list:
-        aut_i_queue, aut_o_queue = sync_mgr.Queue(), sync_mgr.Queue()
+        aut_i_queue, aut_o_queue = Queue(), Queue()
         agent_queue_list.append((aut_i_queue, aut_o_queue))
         agent_proc_list.append(Process(target=run_as_process,
                                        kwargs={"aut": aut,
@@ -74,7 +73,12 @@ def test_protocol(scenario: Dict[str, Tuple[MotionInitInfo, List]]) -> None:
                                        agent_queue_list)
             act_list.extend(sent_act_list)
     finally:
-        stop_ev.set()  # Stop all automatons especially AirspaceManager
+        stop_ev.set()  # Signal all automatons to stop especially AirspaceManager
+        air_mgr_i_queue.close()
+        air_mgr_o_queue.close()
+        for agent_i_queue, agent_o_queue in agent_queue_list:
+            agent_i_queue.close()
+            agent_o_queue.close()
         for proc in proc_list:
             proc.join(2)
         for proc in proc_list:

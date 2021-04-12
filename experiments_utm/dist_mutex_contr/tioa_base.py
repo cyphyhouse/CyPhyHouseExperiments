@@ -1,7 +1,7 @@
 import abc
 from collections import Counter
-from multiprocessing.synchronize import Event
-from queue import Empty, Queue
+from multiprocessing import Event, Queue
+from queue import Empty
 from typing import Any, Dict, List, Optional, Tuple
 
 # TODO avoid importing rospy if not using ROS
@@ -154,6 +154,8 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
     # except RuntimeError as e:
     #    print(repr(e), end=' ')
     finally:
+        o_queue.close()
+        i_queue.close()
         if isinstance(aut, Agent):
             if not aut.motion.landing():
                 print("Landing failed.")
