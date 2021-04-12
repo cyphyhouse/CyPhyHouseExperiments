@@ -35,15 +35,29 @@ DryVRTraceT = np.ndarray
 
 
 def current_path_to_mode(msg: Current_Path) -> ROSplaneModeT:
-    return ROSplaneModeT(
-        msg.path_type,
-        msg.Va_d,
-        msg.r[0], msg.r[1], msg.r[2],
-        msg.q[0], msg.q[1], msg.q[2],
-        msg.c[0], msg.c[1], msg.c[2],
-        msg.rho,
-        msg.lambda_
-    )
+    # Set unused fields to None so that the same modes will not be consider different modes.
+    # This is because the unused fields may be filled with values of previous messages.
+    if msg.path_type == 0:  # Orbit Path
+        return ROSplaneModeT(
+            msg.path_type,
+            msg.Va_d,
+            None, None, None,
+            None, None, None,
+            msg.c[0], msg.c[1], msg.c[2],
+            msg.rho,
+            msg.lambda_
+        )
+    else:
+        assert msg.path_type == 1  # Straight Line path
+        return ROSplaneModeT(
+            msg.path_type,
+            msg.Va_d,
+            msg.r[0], msg.r[1], msg.r[2],
+            msg.q[0], msg.q[1], msg.q[2],
+            None, None, None,
+            None,
+            None
+        )
 
 
 def state_to_state(msg: State) -> ROSplaneStateT:
