@@ -104,8 +104,11 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
     start_time = float("NaN")
     try:
         rospy.init_node(repr(aut), anonymous=True, disable_signals=False)
-        # Initialize Publishers and Subscribers
 
+        rospy.logdebug("%s: waiting for the first clock message" % repr(aut))
+        rospy.wait_for_message("/clock", Clock)  # Wait for first update of clock
+
+        # Initialize Publishers and Subscribers
         # FIXME TIOA should not depend on specific implementations
         from .agent import Agent
         if isinstance(aut, Agent):
@@ -118,9 +121,9 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
             # NOTE This creates a thread in this process
             rospy.Subscriber(pose_topic_name, PoseStamped, update_pose, queue_size=10)
 
-            rospy.wait_for_message(pose_topic_name, PoseStamped, timeout=10.0)
+            rospy.logdebug("%s: waiting for the first position message" % repr(aut))
+            rospy.wait_for_message(pose_topic_name, PoseStamped)
 
-        rospy.wait_for_message("/clock", Clock, timeout=5.0)  # Wait for first update of clock
         busy_waiting_start = rospy.Time.now()
         start_time = busy_waiting_start.to_sec()
         rospy.logdebug("Start %s at %.2f" % (aut, busy_waiting_start.to_sec()))
@@ -156,9 +159,6 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
     finally:
         o_queue.close()
         i_queue.close()
-        if isinstance(aut, Agent):
-            if not aut.motion.landing():
-                print("Landing failed.")
         end_time = rospy.Time.now().to_sec()
         rospy.logdebug("Ending %s at %.2f..." % (aut, end_time))
         print('-', {"name": repr(aut), "t_start": start_time, "t_end": end_time, **aut.queries})
