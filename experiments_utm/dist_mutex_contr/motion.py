@@ -38,6 +38,18 @@ class MotionBase(abc.ABC):
         self._position = device_init_info.position  # type: Tuple[float, float, float]
         self._orientation = (0.0, 0.0, 0.0, 1.0)  # TODO compute Quaternion from initial yaw
 
+    @abc.abstractmethod
+    def register_ros_pub_sub(self) -> None:
+        """
+        ROS publisher and subscriber should be created in this method instead of __init__.
+        FIXME This is a temporary solution to ensure rospy.init_node is called before creating publisher/subscriber
+            under multiple processes. Because Motion object currently is created in the parent/root process, ROS node
+            for each child process is not initialized yet.
+            A better way may be reading only multiprocessing-safe config objects and create MotionBase objects in each
+            child process.
+        """
+        raise NotImplementedError
+
     @property
     def orientation(self) -> Tuple[float, float, float, float]:
         with self._var_lock:
@@ -108,13 +120,16 @@ class MotionROSplane(MotionBase):
     def __init__(self, device_init_info: MotionInitInfo):
         super(MotionROSplane, self).__init__(device_init_info)
 
-        topic_prefix = self._device_init_info.topic_prefix
         self._first_flag = 1
-        self._pose_client = rospy.Publisher(topic_prefix+"/waypoint_path", Waypoint, queue_size=10)
+        self._pose_client = None
 
         init_xyz = np.array(self._device_init_info.position)
         init_xyz[2] = 0.0  # Set z to 0
         self._init_ned = self._position_xyz_to_ned(init_xyz)
+
+    def register_ros_pub_sub(self) -> None:
+        self._pose_client = rospy.Publisher(self._device_init_info.topic_prefix + "/waypoint_path",
+                                            Waypoint, queue_size=10)
 
     def landing(self) -> None:
         rospy.logwarn("Landing for ROSplane is not supported yet.")
@@ -165,7 +180,11 @@ class MotionHectorQuad(MotionBase):
     def __init__(self, device_init_info: MotionInitInfo):
         super(MotionHectorQuad, self).__init__(device_init_info)
         self._status = self.Status.STAYING
+        self._takeoff_client = None
+        self._landing_client = None
+        self._pose_client = None
 
+    def register_ros_pub_sub(self) -> None:
         topic_prefix = self._device_init_info.topic_prefix
         takeoff_topic = rospy.resolve_name(topic_prefix + "/action/takeoff")
         self._takeoff_client = SimpleActionClient(takeoff_topic, TakeoffAction)
