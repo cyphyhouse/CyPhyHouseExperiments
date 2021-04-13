@@ -1,9 +1,12 @@
 import abc
 from copy import deepcopy
 from enum import Enum
+import importlib.resources
+import pickle
 from threading import RLock
 from typing import Mapping, NamedTuple, Tuple, Type, Union, List
 
+import numpy
 from actionlib import GoalStatus, SimpleActionClient, SimpleGoalState
 from geometry_msgs.msg import Point, PoseStamped, Quaternion
 from hector_uav_msgs.msg import LandingAction, LandingGoal, \
@@ -13,6 +16,8 @@ import rospy
 import numpy as np
 from scipy.spatial import Rectangle
 from scipy.spatial.distance import euclidean
+
+from . import primitive_contracts
 
 MotionInitInfo = NamedTuple(
     "MotionInitInfo",
@@ -72,11 +77,34 @@ class MotionBase(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def waypoints_to_plan(self, clk: float, way_points) -> List[StampedRect]:
+    def waypoints_to_plan(self, clk: float, way_points: List) -> List[StampedRect]:
         raise NotImplementedError
 
 
+def _load_reachtube_from_pickle(filename):
+    # FIXME this is a temporary solution to read reachtube from pickle files
+    bin_text = importlib.resources.read_binary(primitive_contracts, filename)
+    rtube = pickle.loads(bin_text)
+    return rtube
+
+
 class MotionROSplane(MotionBase):
+    # FIXME a temporary solution to store primitive contracts
+    REACHTUBE_FILE_NAME = "rosplane.rtube.pickle"
+    CONTRACT_DICT = {"loiter": _load_reachtube_from_pickle(REACHTUBE_FILE_NAME)}
+
+    @staticmethod
+    def _position_ned_to_xyz(ned: np.ndarray) -> np.ndarray:
+        """ ROSplane aligns north with x-axis, hence, east is negative y, and down is negative z"""
+        assert len(ned) == 3
+        return np.array([ned[0], -ned[1], -ned[2]])
+
+    @staticmethod
+    def _position_xyz_to_ned(xyz: np.ndarray) -> np.ndarray:
+        """ ROSplane aligns x-axis with north, hence, y is negative east (west), and z is negative down (up)"""
+        assert len(xyz) == 3
+        return np.array([xyz[0], -xyz[1], -xyz[2]])
+
     def __init__(self, device_init_info: MotionInitInfo):
         super(MotionROSplane, self).__init__(device_init_info)
 
@@ -84,15 +112,18 @@ class MotionROSplane(MotionBase):
         self._first_flag = 1
         self._pose_client = rospy.Publisher(topic_prefix+"/waypoint_path", Waypoint, queue_size=10)
 
+        init_xyz = np.array(self._device_init_info.position)
+        init_xyz[2] = 0.0  # Set z to 0
+        self._init_ned = self._position_xyz_to_ned(init_xyz)
+
     def landing(self) -> None:
-        raise NotImplementedError("Landing for ROSplane is not supported yet.")
+        rospy.logwarn("Landing for ROSplane is not supported yet.")
 
     def send_target(self, point: Tuple[float, float, float]):
       
         target_pose = Waypoint()
-        target_pose.w[0] = np.float32(point[0] - self._device_init_info.position[0])
-        target_pose.w[1] = -(np.float32(point[1] - self._device_init_info.position[1]))
-        target_pose.w[2] = np.float32(-point[2])
+        shifted_ned = self._position_xyz_to_ned(np.array(point)) - self._init_ned
+        target_pose.w = shifted_ned
         target_pose.chi_d = 0
         target_pose.chi_valid = False
         target_pose.Va_d = 12
@@ -103,13 +134,25 @@ class MotionROSplane(MotionBase):
             self._first_flag = 0
         else:
             target_pose.set_current = False
-        # NOTE Do not wait for result   
-        print("sending waypoints")
+        # NOTE Do not wait for result
+        print("sending waypoints %s" % str(point))
         return self._pose_client.publish(target_pose)
 
-    def waypoints_to_plan(self, clk: float, way_points) -> List[StampedRect]:
-        # TODO
-        raise NotImplementedError
+    def waypoints_to_plan(self, clk: float, way_points: List) -> List[StampedRect]:
+        clk += 51.0  # XXX Make the contract last for the first 50.0 seconds
+        t_ned_arr = self.CONTRACT_DICT["loiter"][:, :, 0:4]
+        assert numpy.all(numpy.isfinite(t_ned_arr))
+        ret = []
+        rect = None
+        t_max = float("nan")
+        for t_ned in t_ned_arr[::20]:
+            t_min, t_max = float(t_ned[0][0]), float(t_ned[1][0])
+            ned_min, ned_max = t_ned[0][1:4].astype(float), t_ned[1][1:4].astype(float)
+            xyz_min, xyz_max = self._position_ned_to_xyz(ned_min), self._position_ned_to_xyz(ned_max)
+            rect = Rectangle(mins=xyz_min, maxes=xyz_max)
+            ret.append(StampedRect(stamp=clk+t_min, rect=rect, reaching_wp=False))
+        ret.append(StampedRect(stamp=clk+t_max, rect=rect, reaching_wp=True))
+        return ret
 
 
 class MotionHectorQuad(MotionBase):
