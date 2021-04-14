@@ -1,7 +1,10 @@
 import abc
 from copy import deepcopy
 from enum import Enum
-import importlib.resources
+try:
+    import importlib.resources as importlib_resources
+except ImportError:
+    import importlib_resources as importlib_resources
 import pickle
 from threading import RLock
 from typing import Mapping, NamedTuple, Tuple, Type, Union, List
@@ -95,7 +98,7 @@ class MotionBase(abc.ABC):
 
 def _load_reachtube_from_pickle(filename):
     # FIXME this is a temporary solution to read reachtube from pickle files
-    bin_text = importlib.resources.read_binary(primitive_contracts, filename)
+    bin_text = importlib_resources.read_binary(primitive_contracts, filename)
     rtube = pickle.loads(bin_text)
     return rtube
 
