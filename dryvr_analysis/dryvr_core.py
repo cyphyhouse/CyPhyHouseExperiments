@@ -92,8 +92,7 @@ def get_reachtube(center_trace: np.ndarray, initial_radii, discrepancy_parameter
                 assert prev_ind == start_ind
                 assert start_ind < end_ind
                 segment_t = center_trace[start_ind:end_ind + 1, 0]
-                segment_df = normalizing_initial_set_radii[dim_ind - 1] * np.exp(y_intercept) * np.exp(
-                    slope * segment_t)
+                segment_df = normalizing_initial_set_radii[dim_ind - 1] * np.exp(y_intercept + slope * segment_t)
                 segment_df[0] = max(segment_df[0], prev_val)
                 df[start_ind:end_ind + 1, dim_ind] = segment_df
                 prev_val = segment_df[-1]
