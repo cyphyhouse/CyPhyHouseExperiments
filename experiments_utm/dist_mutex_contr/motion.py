@@ -99,14 +99,14 @@ class MotionBase(abc.ABC):
 def _load_reachtube_from_pickle(filename):
     # FIXME this is a temporary solution to read reachtube from pickle files
     bin_text = importlib_resources.read_binary(primitive_contracts, filename)
-    rtube = pickle.loads(bin_text)
-    return rtube
+    rtube_dict = pickle.loads(bin_text)
+    return rtube_dict
 
 
 class MotionROSplane(MotionBase):
     # FIXME a temporary solution to store primitive contracts
     REACHTUBE_FILE_NAME = "rosplane.rtube.pickle"
-    CONTRACT_DICT = {"loiter": _load_reachtube_from_pickle(REACHTUBE_FILE_NAME)}
+    CONTRACT_DICT = _load_reachtube_from_pickle(REACHTUBE_FILE_NAME)
 
     @staticmethod
     def _position_ned_to_xyz(ned: np.ndarray) -> np.ndarray:
@@ -156,20 +156,43 @@ class MotionROSplane(MotionBase):
         print("sending waypoints %s" % str(point))
         return self._pose_client.publish(target_pose)
 
-    def waypoints_to_plan(self, clk: float, way_points: List) -> List[StampedRect]:
-        clk += 51.0  # XXX Make the contract last for the first 50.0 seconds
-        t_ned_arr = self.CONTRACT_DICT["loiter"][:, :, 0:4]
-        assert numpy.all(numpy.isfinite(t_ned_arr))
-        ret = []
-        rect = None
-        t_max = float("nan")
-        for t_ned in t_ned_arr[::20]:
+    @classmethod
+    def _extend_contract_from_reachtube(cls, plan: List[StampedRect], key: str, t_start: float = 0.0) -> float:
+        """
+        Extend the given plan with rectangles from the reachtube under the given key.
+        Parameters
+        ----------
+        plan
+        key
+        t_start
+
+        Returns
+        -------
+        float
+            the timestamp where the last rectangle should still hold.
+        """
+        SUBSAMPLE_STEP = 40
+        t_ned_arr = cls.CONTRACT_DICT[key][:, :, 0:4]
+        assert len(t_ned_arr) > 0
+        for t_ned in t_ned_arr[::SUBSAMPLE_STEP]:
             t_min, t_max = float(t_ned[0][0]), float(t_ned[1][0])
             ned_min, ned_max = t_ned[0][1:4].astype(float), t_ned[1][1:4].astype(float)
-            xyz_min, xyz_max = self._position_ned_to_xyz(ned_min), self._position_ned_to_xyz(ned_max)
+            xyz_min, xyz_max = cls._position_ned_to_xyz(ned_min), cls._position_ned_to_xyz(ned_max)
             rect = Rectangle(mins=xyz_min, maxes=xyz_max)
-            ret.append(StampedRect(stamp=clk+t_min, rect=rect, reaching_wp=False))
-        ret.append(StampedRect(stamp=clk+t_max, rect=rect, reaching_wp=True))
+            plan.append(StampedRect(stamp=t_start+t_min, rect=rect, reaching_wp=False))
+        return t_start+t_max
+
+    def waypoints_to_plan(self, clk: float, way_points: List) -> List[StampedRect]:
+        ret = []  # type: List[StampedRect]
+        next_t_start = clk + 10.0
+        next_t_start = self._extend_contract_from_reachtube(ret, "takeoff", next_t_start)
+        # Shift the loitering contract to be after takeoff contract
+        next_t_start += 40.0
+        next_t_start = self._extend_contract_from_reachtube(ret, "loiter", next_t_start)
+
+        assert len(ret) > 0
+        last_rect = ret[-1].rect
+        ret.append(StampedRect(stamp=next_t_start, rect=last_rect, reaching_wp=True))
         return ret
 
 
