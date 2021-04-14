@@ -4,4 +4,4 @@ world_name: "empty.world"
 devices:
 #- {bot_name: "drone0", bot_type: "QUAD", init_pos: [-100.0, -100, 0.3]}
 - {bot_name: "drone1", bot_type: "QUAD", init_pos: [ 80.0, -150, 0.3]}
-- {bot_name: "plane0", bot_type: "PLANE", init_pos: [0.0, 0.0, 0.0]}
+- {bot_name: "plane0", bot_type: "PLANE", init_pos: [-200.0, 0.0, 0.0]}
