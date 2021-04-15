@@ -3,3 +3,4 @@ numpy
 PyYAML
 matplotlib
 importlib_resources; python_version < '3.7'
+git+https://gitlab.engr.illinois.edu/chsieh16/reachtube.git

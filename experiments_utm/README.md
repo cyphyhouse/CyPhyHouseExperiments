@@ -34,10 +34,11 @@ Install Packages for simulation
 Please follow the steps in the parent directory to install the CyPhyHouse Cymulator.
 Steps below are addition packages required for running UTM experiments with the CyPhyHouse Cymulator.
 
-3. Clone and install Python library for processing reachtubes and Operation Volume Contracts.
+3. Clone and install required Python packages using `pip3`.
+   This also installs our package for processing reachtubes and Operation Volume Contracts.
+   The source code is available at https://gitlab.engr.illinois.edu/chsieh16/reachtube
    ```shell
-   git clone https://gitlab.engr.illinois.edu/chsieh16/reachtube.git ReachtubeRepo
-   pip3 install --user -e ReachtubeRepo/
+   pip3 install --user -r requirements.txt
    ```
 
 
