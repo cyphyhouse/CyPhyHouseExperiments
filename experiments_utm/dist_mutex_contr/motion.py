@@ -260,7 +260,7 @@ class MotionHectorQuad(MotionBase):
 
         return status == GoalStatus.SUCCEEDED
 
-    def waypoints_to_plan(self, clk: float, way_points, default=True) -> List[StampedRect]:
+    def waypoints_to_plan(self, clk: float, way_points, default=False) -> List[StampedRect]:
         pos = self.position  # NOTE: self.position returns a copy, so the value won't be changed by other threads.
         if default:
             rect_list = self._bloat_path(pos, way_points)
