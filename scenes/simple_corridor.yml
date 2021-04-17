@@ -2,10 +2,10 @@ world_name: "/home/yifengn2/world/world2"
 
 
 devices:
-- {bot_name: "drone0", bot_type: "QUAD", init_pos: [ -325.0, 25, 0.3]}
-- {bot_name: "drone1", bot_type: "QUAD", init_pos: [ -300, 25, 0.3]}
-- {bot_name: "drone2", bot_type: "QUAD", init_pos: [ -175,25, 0.3]}
-- {bot_name: "drone3", bot_type: "QUAD", init_pos: [ 100.0, 100.0, 0.3]}
-- {bot_name: "drone4", bot_type: "QUAD", init_pos: [ 225.0, 100.0, 0.3]}
-- {bot_name: "drone5", bot_type: "QUAD", init_pos: [ 350.0, 100.0, 0.3]}
-- {bot_name: "plane0", bot_type: "PLANE", init_pos: [-200.0, 0.0, 0.0]}
+#- {bot_name: "drone0", bot_type: "QUAD", init_pos: [ -325.0, 25, 0.3]}
+# {bot_name: "drone1", bot_type: "QUAD", init_pos: [ -300, 25, 0.3]}
+#- {bot_name: "drone2", bot_type: "QUAD", init_pos: [ -175,25, 0.3]}
+#- {bot_name: "drone3", bot_type: "QUAD", init_pos: [ 100.0, 100.0, 0.3]}
+#- {bot_name: "drone4", bot_type: "QUAD", init_pos: [ 225.0, 100.0, 0.3]}
+#- {bot_name: "drone5", bot_type: "QUAD", init_pos: [ 350.0, 100.0, 0.3]}
+- {bot_name: "plane0", bot_type: "PLANE", init_pos: [-300.0, 0.0, 0.0]}
