@@ -110,7 +110,7 @@ def main(argv: Any) -> None:
     mode_traces_map = pickle.load(argv.pickle_file)  # type: Dict[Any, Iterable[Iterable]]
     # TODO Validate the input pickled data
 
-    rtube_traces_list = []
+    mode_rtube_map = {}
     for i, (mode, processed_trace_seq) in enumerate(mode_traces_map.items()):
         if len(processed_trace_seq) <= 1:
             continue
@@ -123,10 +123,15 @@ def main(argv: Any) -> None:
         training_traces = np.array(processed_trace_seq)
         assert training_traces.ndim == 3
         rtube = compute_reachtube(training_traces, 0)
-        rtube_traces_list.append((rtube, training_traces))
+        mode_rtube_map[mode] = rtube
 
-        file_name = "%s-mode-%d.svg" % (out_file_name_base, i)
-        save_plots(file_name, mode, rtube, training_traces)
+        if argv.plot:
+            file_name = "%s-mode-%d.svg" % (out_file_name_base, i)
+            save_plots(file_name, mode, rtube, training_traces)
+
+    if argv.save_rtube:
+        with open(out_file_name_base + ".rtube.pickle", "wb") as rtube_pickle_file:
+            pickle.dump(mode_rtube_map, rtube_pickle_file)
 
 
 if __name__ == "__main__":
@@ -134,4 +139,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('pickle_file', type=argparse.FileType('rb'))
+    parser.add_argument('--plot', action="store_const", default=True, const=True, dest='plot',
+                        help="Do not generate files for plots")
+    parser.add_argument('--no-plot', action="store_const", const=False, dest='plot',
+                        help="Do not generate files for plots")
+    parser.add_argument('-s', '--save-rtube', action="store_true", dest='save_rtube',
+                        help="Save a Python dict from each mode to its reachtube in a pickle file")
     main(parser.parse_args())
