@@ -1,6 +1,8 @@
 import math
+from collections import defaultdict
 from sys import float_info
-from typing import NamedTuple, Any, List, Mapping, Iterable, Tuple, Dict, Iterator, Generator, Callable, TypeVar
+from typing import NamedTuple, Any, List, Mapping, Iterable, Tuple, Dict, Iterator, Generator, Callable, TypeVar, \
+    Sequence, Hashable, Union, BinaryIO
 
 from genpy.message import Message
 from rosbag import Bag
@@ -19,9 +21,9 @@ MAX_PRECISE_INT = float_info.radix ** float_info.mant_dig
 DATAPOINT_END = StampedDataPoint(math.inf, None)
 
 
-def process_bag_file(filename: str,
+def process_bag_file(file: Union[str, BinaryIO],
                      topic_to_cb: Mapping[str, Callable[[ROSMsgT], DataPoint]]) \
-        -> Tuple[str, DistTrace]:
+        -> DistTrace:
     """
     Process messages from bag files
 
@@ -31,7 +33,7 @@ def process_bag_file(filename: str,
     Be careful when merging messages from different topics.
     """
     ret_dist_trace = {topic: [] for topic in topic_to_cb.keys()}  # type: Dict[str, List[StampedDataPoint]]
-    with Bag(filename) as bag:
+    with Bag(file) as bag:
         for topic, msg, t in bag.read_messages(topics=topic_to_cb.keys()):
             if hasattr(msg, "header"):
                 t = msg.header.stamp  # Use sender's timestamp if available
@@ -48,7 +50,7 @@ def process_bag_file(filename: str,
             else:
                 continue  # Ignore other topics
 
-    return filename, ret_dist_trace
+    return ret_dist_trace
 
 
 def _advance_pass_stamp(trace_iter_dict: Dict[str, Tuple[StampedDataPoint, Iterator[StampedDataPoint]]],
@@ -120,3 +122,86 @@ def gen_stamped_state(dist_trace: DistTrace,
         _advance_pass_stamp(trace_iter_dict, curr_dist_obs, curr_stamp)
         yield observation_to_user_state(curr_stamp, curr_dist_obs)
         prev_stamp = curr_stamp
+
+
+_StampedStateT = Tuple[float, ...]
+_SegmentT = Sequence[_StampedStateT]
+
+
+def _split_dist_trace(stamped_mode_iseq: Iterable[StampedDataPoint],
+                      stamped_state_iseq: Iterable[StampedDataPoint]) \
+        -> Generator[Tuple[Hashable, _SegmentT], None, None]:
+    """ Cut the original trace into segments based on the timestamps of modes.
+    The segment before the first mode is uninitialized.
+    The segment after the last waypoint is excluded to remove disturbance due to termination.
+    """
+    stamped_mode_iter = iter(stamped_mode_iseq)
+    stamped_state_iter = iter(stamped_state_iseq)
+
+    prev_stamp, prev_mode = -math.inf, ()
+    try:
+        stamp, state = next(stamped_state_iter)
+        for wp_stamp, wp in stamped_mode_iter:
+            segment = []
+            while stamp < wp_stamp:
+                segment.append((stamp,) + tuple(state))
+                stamp, state = next(stamped_state_iter)
+            # NOTE: Last mode is automatically excluded due to this line using previous waypoints
+            curr_mode = (prev_stamp,) + tuple(prev_mode)
+            yield curr_mode, segment
+            prev_stamp, prev_mode = wp_stamp, wp
+    except StopIteration:  # Exhaust all states
+        raise ValueError("No state available in state_topic")
+
+
+def _concatenate_same_mode(mode_trace_iseq: Iterable[Tuple[Hashable, _SegmentT]]) \
+        -> Generator[Tuple[Hashable, _SegmentT], None, None]:
+    """Consecutive segments with the same mode are concatenated as one trace."""
+    seg_iter = iter(mode_trace_iseq)
+    prev_mode, prev_trace = next(seg_iter)
+    prev_trace_as_list = list(prev_trace)
+    for mode, trace in seg_iter:
+        if mode[1:] == prev_mode[1:]:
+            prev_trace_as_list.extend(trace)
+        else:
+            yield prev_mode, prev_trace_as_list
+            prev_mode = mode
+            prev_trace_as_list = list(trace)
+
+    yield prev_mode, prev_trace_as_list
+
+
+def dist_trace_to_mode_seg_tuples(dist_trace: DistTrace, mode_topic: str, state_topic: str) \
+        -> Sequence[Tuple[Hashable, _SegmentT]]:
+    """
+    Convert distributed traces to a sequence of tuples of a mode and a trace segment
+    Parameters
+    ----------
+    dist_trace
+        Mapping from a topic to a recorded trace of the topic
+    mode_topic
+        The topic whose timestamps are used to split traces
+    state_topic
+        The topic whose trace is split into segments
+    Returns
+    -------
+    mode_seg_tuples
+        A sequence of tuples of a mode and the trace segment following that mode.
+    """
+
+    seg_iter = _split_dist_trace(dist_trace[mode_topic], dist_trace[state_topic])
+    seg_iter = _concatenate_same_mode(seg_iter)
+    uninit_mode, _ = next(seg_iter)  # Ignore the first segment because its mode is uninitialized
+    assert uninit_mode == (-math.inf,)
+    return list(seg_iter)
+
+
+def aggregate_by_mode(mode_seg_iseq: Iterable[Tuple[Hashable, _SegmentT]])\
+        -> Mapping[Hashable, List[_SegmentT]]:
+    mode_seg_iter = iter(mode_seg_iseq)
+    aggregated_dict = defaultdict(list)  # type: Dict[Hashable, List[_SegmentT]]
+    for stamped_mode, seg in mode_seg_iter:
+        mode = tuple(stamped_mode[1:])  # remove timestamp as dictionary key
+        aggregated_dict[mode].append(seg)
+
+    return aggregated_dict
