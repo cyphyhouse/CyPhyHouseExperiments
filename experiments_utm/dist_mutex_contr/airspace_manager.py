@@ -74,11 +74,11 @@ class AirspaceManager(AutomatonBase):
     # See http://wiki.ros.org/simulator_gazebo/Tutorials/ListOfMaterials for available script names
     _AGENT_COLOR_MAP = {
         "drone0": "Gazebo/OrangeTransparentOverlay",
-        "drone1": "Gazebo/YellowTransparent",
-        "drone2": "Gazebo/BlueTransparentOverlay",
-        "drone3": "Gazebo/DarkMagentaTransparent",
-        "drone4": "Gazebo/GreyTransparent",
-        "drone5": "Gazebo/BlackTransparent"
+        "drone1": "Gazebo/OrangeTransparentOverlay",
+        "drone2": "Gazebo/OrangeTransparentOverlay",
+        "drone3": "Gazebo/OrangeTransparentOverlay",
+        "drone4": "Gazebo/OrangeTransparentOverlay",
+        "drone5": "Gazebo/OrangeTransparentOverlay"
     }
 
     def _build_diag_msg(self) -> DiagnosticArray:
