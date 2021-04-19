@@ -9,7 +9,6 @@ import pickle
 from threading import RLock
 from typing import Mapping, NamedTuple, Tuple, Type, Union, List
 
-import numpy
 from actionlib import GoalStatus, SimpleActionClient, SimpleGoalState
 from geometry_msgs.msg import Point, PoseStamped, Quaternion
 from hector_uav_msgs.msg import LandingAction, LandingGoal, \
@@ -184,11 +183,12 @@ class MotionROSplane(MotionBase):
 
     def waypoints_to_plan(self, clk: float, way_points: List) -> List[StampedRect]:
         ret = []  # type: List[StampedRect]
-        next_t_start = clk 
+        next_t_start = clk + 5.0
         next_t_start = self._extend_contract_from_reachtube(ret, "takeoff", next_t_start)
         # Shift the loitering contract to be after takeoff contract
-        next_t_start += 41.0
+        next_t_start += 18.0
         next_t_start = self._extend_contract_from_reachtube(ret, "loiter", next_t_start)
+        next_t_start = self._extend_contract_from_reachtube(ret, "descend", next_t_start)
 
         assert len(ret) > 0
         last_rect = ret[-1].rect
