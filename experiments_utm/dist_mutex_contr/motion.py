@@ -186,7 +186,7 @@ class MotionROSplane(MotionBase):
         next_t_start = clk + 5.0
         next_t_start = self._extend_contract_from_reachtube(ret, "takeoff", next_t_start)
         # Shift the loitering contract to be after takeoff contract
-        next_t_start += 18.0
+        next_t_start = self._extend_contract_from_reachtube(ret, "interchange", next_t_start)
         next_t_start = self._extend_contract_from_reachtube(ret, "loiter", next_t_start)
         next_t_start = self._extend_contract_from_reachtube(ret, "descend", next_t_start)
 
