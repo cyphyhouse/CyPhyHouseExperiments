@@ -5,9 +5,11 @@ from typing import Any, Dict, Iterable, Optional
 
 import numpy as np
 from matplotlib import pyplot as plt
-from matplotlib.patches import Rectangle
+from matplotlib.patches import Rectangle, Ellipse
 
 from dryvr_core import get_discrepancy_parameters, get_reachtube
+
+FONT = {"fontname": "Nimbus Roman", "fontsize": 18}
 
 
 def plot_z_dim(ax, rtsegment, traces: Optional[Iterable[np.ndarray]] = None, num_states: Optional[int] = None):
@@ -30,8 +32,8 @@ def plot_z_dim(ax, rtsegment, traces: Optional[Iterable[np.ndarray]] = None, num
     ax.fill_between(t_seq, x_min_seq, x_max_seq, step='post', alpha=0.1,
                     color='lightgray')
 
-    ax.set_xlabel("t in sec.")
-    ax.set_ylabel("z(t) in meters")
+    ax.set_xlabel("t in sec.", **FONT)
+    ax.set_ylabel("z(t) in meters", **FONT)
 
 
 def plot_xy_dims(ax, rtsegment, traces: Optional[Iterable[np.ndarray]] = None, num_states: Optional[int] = None):
@@ -45,31 +47,40 @@ def plot_xy_dims(ax, rtsegment, traces: Optional[Iterable[np.ndarray]] = None, n
     for trace in traces:
         ax.plot(trace[:, x_dim], trace[:, y_dim], color='black')
 
-    for hrect_ind in range(0, num_states):
+    for hrect_ind in range(0, num_states, 20):
         x_min, x_max = rtsegment[hrect_ind, 0, x_dim], rtsegment[hrect_ind, 1, x_dim]
         y_min, y_max = rtsegment[hrect_ind, 0, y_dim], rtsegment[hrect_ind, 1, y_dim]
-        ax.add_patch(Rectangle((x_min, y_min), x_max - x_min, y_max - y_min,  # alpha=0.3,
+        # ax.add_patch(Ellipse(((x_min + x_max)/2, (y_min + y_max)/2), x_max - x_min, y_max - y_min,  # alpha=0.3,
+        #                        color='lightgray', fill=False))
+        ax.add_patch(Rectangle((x_min, y_min), x_max - x_min, y_max - y_min,
                                color='lightgray', fill=False))
 
     ax.grid(True, linestyle='--')
-    ax.set_xlabel("x in meters")
-    ax.set_ylabel("y in meters")
+    ax.set_xlabel("x in meters", **FONT)
+    ax.set_ylabel("y in meters", **FONT)
 
 
 def save_plots(out_file_name: str, mode, rtube, training_traces) -> None:
     # Plotting
-    fig, ax = plt.subplots(ncols=2)
-    plot_xy_dims(ax[0], rtube, training_traces)
-    ax[0].set_aspect("equal")
-    plot_z_dim(ax[1], rtube, training_traces)
+    fig = plt.figure(figsize=(6, 3))
+    ax0 = plt.subplot2grid((1, 2), (0, 0))
+    plot_xy_dims(ax0, rtube, training_traces)
+    ax0.set_aspect("equal", adjustable='datalim')
+    plt.xticks(**FONT)
+    plt.yticks(**FONT)
+    ax1 = plt.subplot2grid((1, 2), (0, 1))
+    plot_z_dim(ax1, rtube, training_traces)
+    plt.xticks(**FONT)
+    plt.yticks(**FONT)
 
     if any(isinstance(mode, ty) for ty in [list, tuple, np.ndarray]):
         mode_desc = str(tuple(round(f, 4) if isinstance(f, float) else f for f in mode))
     else:
         mode_desc = str(mode)
-    fig.text(0, 0, "Mode=%s" % mode_desc, wrap=True)
+    # fig.text(0.5, 0, "Mode: %s" % mode_desc, wrap=True, horizontalalignment='center', **FONT)
 
-    plt.savefig(out_file_name, format="svg")
+    plt.tight_layout()
+    plt.savefig(out_file_name + ".pdf", format="pdf")
     plt.close(fig)
 
 
@@ -126,7 +137,7 @@ def main(argv: Any) -> None:
         mode_rtube_map[mode] = rtube
 
         if argv.plot:
-            file_name = "%s-mode-%d.svg" % (out_file_name_base, i)
+            file_name = "%s-mode-%d" % (out_file_name_base, i)
             save_plots(file_name, mode, rtube, training_traces)
 
     if argv.save_rtube:
