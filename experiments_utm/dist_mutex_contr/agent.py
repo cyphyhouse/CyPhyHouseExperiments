@@ -136,7 +136,7 @@ class Agent(AutomatonBase):
                 self._curr_contr = acquired
                 self._status = Agent.Status.MOVING
 
-                if(self.__motion._device_init_info[0]=='plane0'):
+                if(self.__motion._device_init_info.bot_type=='PLANE'):
                     rospy.logdebug("%s sending all waypoints %s." % (self, self.__way_points))
                     for tgt in self.__way_points:
                         rospy.sleep(0.5)
@@ -163,7 +163,7 @@ class Agent(AutomatonBase):
         prev = self._plan.pop(0)
         self._plan_contr = self.__plan_to_contr(self._plan)
 
-        if(self.__motion._device_init_info[0]=='plane0'):
+        if(self.__motion._device_init_info.bot_type=='PLANE'):
             if prev.reaching_wp:
                 rospy.logdebug("%s going to next region %s." % (self, prev.rect))
         else:
