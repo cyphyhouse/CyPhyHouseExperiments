@@ -70,6 +70,17 @@ class AirspaceManager(AutomatonBase):
         msg = self._build_diag_msg()
         self.__pub_diag.publish(msg)
 
+    # Material scripts for some predefined agents.
+    # See http://wiki.ros.org/simulator_gazebo/Tutorials/ListOfMaterials for available script names
+    _AGENT_COLOR_MAP = {
+        "drone0": "Gazebo/OrangeTransparentOverlay",
+        "drone1": "Gazebo/OrangeTransparentOverlay",
+        "drone2": "Gazebo/OrangeTransparentOverlay",
+        "drone3": "Gazebo/OrangeTransparentOverlay",
+        "drone4": "Gazebo/OrangeTransparentOverlay",
+        "drone5": "Gazebo/OrangeTransparentOverlay"
+    }
+
     def _build_diag_msg(self) -> DiagnosticArray:
         msg = DiagnosticArray()
         msg.header.stamp = rospy.Time.now()
@@ -78,6 +89,9 @@ class AirspaceManager(AutomatonBase):
             hardware_id=str(uid),
             message="Report contract",
             values=[KeyValue(key="format", value="yaml"),
+                    KeyValue(key="material",
+                             # Default color is green
+                             value=self._AGENT_COLOR_MAP.get(str(uid), "Gazebo/GreenTransparentOverlay")),
                     KeyValue(key="data", value=repr(contr))])
             for uid, contr in self._contr_dict.items()
         ]

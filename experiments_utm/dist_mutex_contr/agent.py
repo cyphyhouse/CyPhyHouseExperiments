@@ -4,22 +4,14 @@ from typing import Any, Callable, Hashable, List, NamedTuple, Optional, Tuple
 
 import rospy  # FIXME avoid rospy
 
-import numpy as np
 from reachtube.drone3d_types import Contract
-from scipy.spatial import Rectangle
-from scipy.spatial.distance import euclidean
 
-from .motion import MotionBase
+from .motion import MotionBase, StampT, StampedRect
 from .tioa_base import Action, AutomatonBase
 
-StampT = float
 StampedPoint = NamedTuple('StampedPoint',
                           [('stamp', StampT),
                            ('position', Tuple[float, float, float])])
-StampedRect = NamedTuple('StampedRect',
-                         [('stamp', StampT),
-                          ('rect', Rectangle),
-                          ('reaching_wp', bool)])
 
 
 class Agent(AutomatonBase):
@@ -118,7 +110,7 @@ class Agent(AutomatonBase):
 
     def _eff_plan(self) -> None:
         if self.__way_points:
-            self._plan = waypoints_to_plan(self.clk.to_sec(), self._position, self.__way_points)
+            self._plan = self.__motion.waypoints_to_plan(self.clk.to_sec(), self.__way_points)
             self._plan_contr = self.__plan_to_contr(self._plan)
             self._status = Agent.Status.REQUESTING
         else:
@@ -144,9 +136,17 @@ class Agent(AutomatonBase):
                 self._curr_contr = acquired
                 self._status = Agent.Status.MOVING
 
-                tgt = self.__way_points.pop(0)
-                rospy.logdebug("%s going to %s." % (self, str(tgt)))
-                self._target = tgt
+                if(self.__motion._device_init_info.bot_type=='PLANE'):
+                    rospy.logdebug("%s sending all waypoints %s." % (self, self.__way_points))
+                    for tgt in self.__way_points:
+                        rospy.sleep(0.5)
+                        self._target = tgt
+                    self.__way_points.clear()
+
+                else:
+                    tgt = self.__way_points.pop(0)
+                    rospy.logdebug("%s going to %s." % (self, str(tgt)))
+                    self._target = tgt
             else:
                 # Not enough contract for the plan. Keep only current contracts
                 self._free_contr = acquired - self._curr_contr
@@ -163,10 +163,14 @@ class Agent(AutomatonBase):
         prev = self._plan.pop(0)
         self._plan_contr = self.__plan_to_contr(self._plan)
 
-        if prev.reaching_wp and self.__way_points:
-            tgt = self.__way_points.pop(0)
-            rospy.logdebug("%s going to %s." % (self, str(tgt)))
-            self._target = tgt
+        if(self.__motion._device_init_info.bot_type=='PLANE'):
+            if prev.reaching_wp:
+                rospy.logdebug("%s going to next region %s." % (self, prev.rect))
+        else:
+            if prev.reaching_wp and self.__way_points:
+                tgt = self.__way_points.pop(0)
+                rospy.logdebug("%s going to %s." % (self, str(tgt)))
+                self._target = tgt
 
     def _pre_succeed(self) -> bool:
         return self._status == Agent.Status.MOVING and len(self._plan) == 1 \
@@ -230,99 +234,3 @@ class Agent(AutomatonBase):
     def __plan_to_contr(plan: List[StampedRect]) -> Contract:
         return Contract.from_stamped_rectangles(
                 tuple((t, rect) for t, rect, _ in plan))
-
-
-BLOAT_WIDTH = 0.5
-
-
-def waypoints_to_plan(clk: float, pos, way_points, default=False) -> List[StampedRect]:
-    if default:
-        rect_list = _bloat_path(pos, way_points)
-        deadline = clk
-        ret = []
-        for rect in rect_list:
-            ret.append(StampedRect(deadline, rect, True))
-            deadline = deadline + 0.5*float(euclidean(rect.maxes, rect.mins))
-        return ret
-    # else:
-    flagged_waypoints = _fixed_resolution(pos, way_points, resolution=2.5)
-
-    deadline_list = [clk]
-    prev_p, prev_reach = pos, True
-    for p, reach in flagged_waypoints:
-        d = float(euclidean(prev_p, p))
-        # if reach, the drone is slowing down. if prev_reach, the drone should have slowed down
-        # Therefore, the deadline is more relaxed.
-        deadline = deadline_list[-1] + d*(0.7 if prev_reach else 0.3 if reach else 0.2)
-        deadline_list.append(deadline)
-        prev_p, prev_reach = p, reach
-
-    flagged_rect_list = _bloat_flagged_path(pos, flagged_waypoints)
-    assert len(flagged_rect_list) == len(deadline_list)
-    ret = [StampedRect(deadline, rect, reached)
-           for deadline, (rect, reached) in zip(deadline_list, flagged_rect_list)]
-    return ret
-
-
-def _fixed_resolution(current_position, waypoints, resolution=1.0):
-    intermediate_pt_list = []  # type: List[Tuple[float, ...]]
-    move_to_next_waypt = []  # type: List[bool]
-    prev_waypoint = current_position
-    for waypoint in waypoints:
-        dist = euclidean(prev_waypoint, waypoint)
-        num_intermediate_pts = int(np.ceil(dist / resolution))
-        lin_list = np.linspace(prev_waypoint, waypoint, num_intermediate_pts + 1)
-        assert len(lin_list) >= 2
-        tail = [tuple(float(x) for x in pt) for pt in lin_list[1:]]
-        intermediate_pt_list.extend(tail)
-        move_to_next_waypt.extend([False] * (len(tail) - 1) + [True])
-        prev_waypoint = waypoint
-    assert len(intermediate_pt_list) == len(move_to_next_waypt)
-    assert move_to_next_waypt[-1]
-    return list(zip(intermediate_pt_list, move_to_next_waypt))
-
-
-def _bloat_point(p: Tuple[float, ...]) -> Rectangle:
-    p_arr = np.array(p)
-    return Rectangle(mins=p_arr - BLOAT_WIDTH,
-                     maxes=p_arr + BLOAT_WIDTH)
-
-
-def _bloat_path(cur_pos: Tuple[float, ...],
-                way_points: List[Tuple[float, ...]]) -> List[Rectangle]:
-    ret = []  # type: List[Rectangle]
-    prev_rect = _bloat_point(cur_pos)
-    for p in way_points:
-        curr_rect = _bloat_point(p)
-        ret.append(_bloat_segment(prev_rect, curr_rect))
-        prev_rect = curr_rect
-    ret.append(prev_rect)  # Stay in the last rect
-    return ret
-
-
-def _bloat_flagged_path(cur_pos: Tuple[float, ...],
-                        flagged_waypoints: List[Tuple[Tuple[float, ...], bool]]) \
-        -> List[Tuple[Rectangle, bool]]:
-    assert flagged_waypoints[-1][1]
-    ret = []  # type: List[Tuple[Rectangle, bool]]
-
-    curr_rect = _bloat_point(cur_pos)
-    prev_rect_list = [curr_rect]
-    for p, flag in flagged_waypoints:
-        curr_rect = _bloat_point(p)
-        if not flag:
-            prev_rect_list.append(curr_rect)
-        else:  # At a flagged waypoint
-            rect_iter = (_bloat_segment(prev_rect, curr_rect) for prev_rect in prev_rect_list)
-            flag_list = [False]*(len(prev_rect_list) - 1) + [True]
-            ret.extend(zip(rect_iter, flag_list))
-            prev_rect_list = [curr_rect]
-    ret.append((curr_rect, True))  # Stay at the last waypoint
-    assert len(ret) == len(flagged_waypoints) + 1
-    return ret
-
-
-def _bloat_segment(bloat_a: Rectangle, bloat_b: Rectangle) -> Rectangle:
-    new_maxes = np.maximum(bloat_a.maxes, bloat_b.maxes)
-    new_mins = np.minimum(bloat_a.mins, bloat_b.mins)
-    return Rectangle(maxes=new_maxes, mins=new_mins)

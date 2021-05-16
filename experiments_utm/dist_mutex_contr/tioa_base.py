@@ -112,6 +112,8 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
         # FIXME TIOA should not depend on specific implementations
         from .agent import Agent
         if isinstance(aut, Agent):
+            aut.motion.register_ros_pub_sub()
+
             pose_topic_name = "/vrpn_client_node/%s/pose" % str(aut.uid)
 
             def update_pose(data: PoseStamped):
