@@ -1,11 +1,9 @@
-world_name: "/home/yifengn2/world/world2"
-
+world_name: "eceb.world"
 
 devices:
-- {bot_name: "drone0", bot_type: "QUAD", init_pos: [ 150, 150, 0.3]} #intersect
-- {bot_name: "drone1", bot_type: "QUAD", init_pos: [ 155, 150, 0.3]}
-- {bot_name: "drone2", bot_type: "QUAD", init_pos: [ 160 ,150, 0.3]}
-- {bot_name: "drone3", bot_type: "QUAD", init_pos: [ 165, 150.0, 0.3]} #intersect
-- {bot_name: "drone4", bot_type: "QUAD", init_pos: [ 170, 150, 0.3]} #intersect
-- {bot_name: "drone5", bot_type: "QUAD", init_pos: [ 175,150,0.3]}
-- {bot_name: "plane0", bot_type: "PLANE", init_pos: [-400.0, 0.0, 1]}
+- {bot_name: "drone0", bot_type: "QUAD", init_pos: [-80.0, -65.5, 0.3]}
+- {bot_name: "drone1", bot_type: "QUAD", init_pos: [-82.0, -65.5, 0.3]}
+- {bot_name: "drone2", bot_type: "QUAD", init_pos: [-84.0, -65.5, 0.3]}
+- {bot_name: "drone3", bot_type: "QUAD", init_pos: [-86.0, -65.5, 0.3]}
+- {bot_name: "drone4", bot_type: "QUAD", init_pos: [-88.0, -65.5, 0.3]}
+- {bot_name: "drone5", bot_type: "QUAD", init_pos: [-90.0, -65.5, 0.3]}
