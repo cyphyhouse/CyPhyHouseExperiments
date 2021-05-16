@@ -10,6 +10,7 @@ from dist_mutex_contr.agent import Agent
 from dist_mutex_contr.motion import build_motion_controller, MotionInitInfo
 from dist_mutex_contr.tioa_base import run_as_process
 import eceb_scenarios
+import city_scenarios
 
 
 def _multicast(mgr_queue_pair, agent_queue_list: List[Tuple[Queue, Queue]]) -> Sequence[bytes]:
@@ -131,7 +132,7 @@ def main(argv=None):
     else:
         argv = parser.parse_args(argv)
 
-    selected_scenario = eceb_scenarios.SIMPLE_CORRIDOR
+    selected_scenario = city_scenarios.AIRPORT
     selected_agents = {'plane0',
                        'drone0',
                        'drone1',
