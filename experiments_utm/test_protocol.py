@@ -116,7 +116,7 @@ def __process_scene_yaml(fd) -> Dict[str, Dict[str, MotionInitInfo]]:
     else:
         raise ValueError("Unexpected value in YAML file")
 
-    return {dev["bot_name"]: MotionInitInfo(
+    return world_name, {dev["bot_name"]: MotionInitInfo(
                 bot_name=dev["bot_name"],
                 bot_type=dev["bot_type"],
                 position=tuple(dev["init_pos"]),
@@ -132,18 +132,36 @@ def main(argv=None):
     else:
         argv = parser.parse_args(argv)
 
-    selected_scenario = city_scenarios.AIRPORT
-    selected_agents = {'plane0',
-                       'drone0',
-                       'drone1',
-                       'drone2',
-                       'drone3',
-                       'drone4',
-                       'drone5'                   
-                       }
 
     # Include device init info from scene yaml file into scenarios
-    device_info_map = __process_scene_yaml(argv.scene)
+    world_name, device_info_map = __process_scene_yaml(argv.scene)
+
+    # Select default waypoints based on world file. Change here to select different predefined waypoint paths
+    if world_name == "city.world":
+        selected_scenario = city_scenarios.AIRPORT
+        selected_agents = {'plane0',
+                           'drone0',
+                           'drone1',
+                           'drone2',
+                           'drone3',
+                           'drone4',
+                           'drone5'
+                          }
+    elif world_name == "eceb.world":
+        selected_scenario = eceb_scenarios.SIMPLE_CORRIDOR
+        selected_agents = {'drone0',
+                           'drone1',
+                           'drone2',
+                           'drone3',
+                           'drone4',
+                           'drone5'
+                          }
+    else:
+        # TODO
+        raise NotImplementedError("Need to handle different maps and waypoints")
+
+    if not selected_agents.issubset(set(device_info_map.keys())):
+        raise ValueError("Not all selected agents are specified in %s" % argv.scene.name)
 
     sc = {key: (device_info_map[key], wps) for key, wps in selected_scenario.items() if key in selected_agents}
     print(datetime.datetime.now().replace(microsecond=0).isoformat(), ':')
