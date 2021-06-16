@@ -11,7 +11,7 @@ from dist_mutex_contr.motion import build_motion_controller, MotionInitInfo
 from dist_mutex_contr.tioa_base import run_as_process
 import eceb_scenarios
 import city_scenarios
-
+import ACAS_scenarios
 
 def _multicast(mgr_queue_pair, agent_queue_list: List[Tuple[Queue, Queue]]) -> Sequence[bytes]:
     act_list = []
@@ -138,15 +138,11 @@ def main(argv=None):
 
     # Select default waypoints based on world file. Change here to select different predefined waypoint paths
     if world_name == "city.world":
-        selected_scenario = city_scenarios.AIRPORT
-        selected_agents = {'plane0',
-                           'drone0',
-                           'drone1',
-                           'drone2',
-                           'drone3',
-                           'drone4',
-                           'drone5'
-                          }
+        selected_scenario = ACAS_scenarios.ACAS_10
+        selected_agents = {
+            'drone0',
+            'drone1',
+        }
     elif world_name == "eceb.world":
         selected_scenario = eceb_scenarios.SIMPLE_CORRIDOR
         selected_agents = {'drone0',

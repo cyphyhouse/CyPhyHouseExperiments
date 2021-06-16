@@ -197,7 +197,7 @@ class MotionROSplane(MotionBase):
 
 
 class MotionHectorQuad(MotionBase):
-    BLOAT_WIDTH = 1.4
+    BLOAT_WIDTH = 0.01
 
     class Status(Enum):
         STAYING = 0
