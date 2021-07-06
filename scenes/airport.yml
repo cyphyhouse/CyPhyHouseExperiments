@@ -9,3 +9,4 @@ devices:
 # - {bot_name: "drone4", bot_type: "QUAD", init_pos: [170.0, 150.0, 0.3]} 
 # - {bot_name: "drone5", bot_type: "QUAD", init_pos: [175.0, 150.0, 0.3]}
 - {bot_name: "plane0", bot_type: "PLANE", init_pos: [-400.0, 0.0, 1]}
+- {bot_name: "plane1", bot_type: "PLANE", init_pos: [-400.0, 100.0, 1]}

@@ -3,11 +3,18 @@ from enum import Enum
 from typing import Any, Callable, Hashable, List, NamedTuple, Optional, Tuple
 
 import rospy  # FIXME avoid rospy
+from std_msgs.msg import String
+from geometry_msgs.msg import PoseStamped, TwistStamped
 
 from reachtube.drone3d_types import Contract
 
 from .motion import MotionBase, StampT, StampedRect
 from .tioa_base import Action, AutomatonBase
+
+import time
+import numpy as np
+
+import pickle
 
 StampedPoint = NamedTuple('StampedPoint',
                           [('stamp', StampT),
@@ -22,10 +29,19 @@ class Agent(AutomatonBase):
         MOVING = 4
         RELEASING = 5
         STOPPING = 6
+        ACAS = 7
+
+    class RA(Enum):
+        CLIMB = 4
+        DESCEND = 5
+        VERT_RATE_LIMIT = 6
+        TURN_RIGHT = 2
+        TURN_LEFT = 3
 
     def __init__(self, uid: Hashable, motion: MotionBase, waypoints: List):
         super(Agent, self).__init__()
 
+        self.id = id
         self.__uid = uid  # Set it as private to avoid being modified
         self.__motion = motion
         self.__way_points = deepcopy(waypoints)
@@ -44,6 +60,58 @@ class Agent(AutomatonBase):
         # so we need self._position to stay the same during a transition
         self._position = self.__motion.position
 
+        self.vra_type: str = ""
+        self.hra_type: str = ""
+        self.hra_val: float = None
+        self.clock = time.time()
+
+        self.ra_waypoint = None
+
+        self.trajectory = []
+
+    def register_ra_subscriber(self):
+        self._acas_ra_sub = rospy.Subscriber('/acas/ra', String, self.__acas_ra_handler)        
+
+    def __acas_ra_handler(self, data):
+        raw_ra_string = data.data
+        # print(raw_ra_string)
+        raw_ra_string = raw_ra_string.split(',')
+        # print(raw_ra_string)
+        self.vra_type = ""
+        self.hra_type = ""
+        data_id = raw_ra_string[0]
+        if data_id == self.uid:
+            for i in range(1, len(raw_ra_string)):
+                ra = raw_ra_string[i]
+                if "Climb" in ra:
+                    self.vra_type = Agent.RA.CLIMB
+                elif "Descend" in ra:
+                    self.vra_type = Agent.RA.DESCEND
+                elif "Limit" in ra:
+                    self.vra_type = Agent.RA.VERT_RATE_LIMIT
+                
+                if "Right" in ra:
+                    self.hra_type = Agent.RA.TURN_RIGHT
+                    val_string = raw_ra_string[i+1]
+                    val_string = val_string.split(':')
+                    self.hra_val = float(val_string[1].strip())
+                elif "Left" in ra:
+                    self.hra_type = Agent.RA.TURN_LEFT
+                    val_string = raw_ra_string[i+1]
+                    val_string = val_string.split(':')
+                    self.hra_val = float(val_string[1].strip())
+
+    def record_trajectory(self):
+        if self._status == Agent.Status.ACAS:
+            self.trajectory.append([deepcopy(self._position),1])
+        else:
+            self.trajectory.append([deepcopy(self._position),0])
+
+    def dump_trajectory(self):
+        fn = f'./trajectories/{self.uid}'
+        with open(fn,'wb+') as f:
+            pickle.dump(self.trajectory, f)
+
     def __repr__(self) -> str:
         return self.__class__.__name__ + "_" + str(self.uid)
 
@@ -53,6 +121,7 @@ class Agent(AutomatonBase):
 
     @_target.setter
     def _target(self, p: Tuple[float, float, float]) -> None:
+        print(f'sending target for agent {self.__uid} type {self.__motion._device_init_info.bot_type}')
         self.__motion.send_target(p)
 
     @property
@@ -65,7 +134,7 @@ class Agent(AutomatonBase):
 
     def is_internal(self, act: Action) -> bool:
         return act[0] == "plan" \
-            or act[0] == "next_region" or act[0] == "succeed" or act[0] == "fail"
+            or act[0] == "next_region" or act[0] == "succeed" or act[0] == "fail" or act[0] == "acas"
 
     def is_output(self, act: Action) -> bool:
         return (act[0] == "request" or act[0] == "release") and act[1]["uid"] == self.uid
@@ -97,13 +166,75 @@ class Agent(AutomatonBase):
             "next_region": build_trans(pre=self._pre_next_region, eff=self._eff_next_region),
             "succeed": build_trans(pre=self._pre_succeed, eff=self._eff_succeed),
             "fail": build_trans(pre=self._pre_fail, eff=self._eff_fail),
-            "release": build_trans(pre=self._pre_release, eff=self._eff_release)
+            "release": build_trans(pre=self._pre_release, eff=self._eff_release),
+            "acas": build_trans(pre=self._pre_acas, eff=self._eff_acas)
         }
 
         try:
             eff_dict[act[0]](**act[1])
         except KeyError:
             raise KeyError("Unknown action \"%s\"" % str(act))
+
+    def _pre_acas(self) -> bool:
+        # print(self.vra_type, self.hra_type, self.hra_val)
+        # return False
+        return self._status == Agent.Status.ACAS or \
+            (self._status == Agent.Status.MOVING and \
+            self.vra_type!='' or (self.hra_type!='' and self.hra_val is not None)) and \
+            self.__motion._device_init_info.bot_type!='PLANE'
+
+    def _eff_acas(self) -> None:
+        if self.vra_type == '' and self.hra_type == '':
+            self.ra_waypoint = None
+            self._status = Agent.Status.RELEASING
+        else:
+            self._status = Agent.Status.ACAS
+            tgt_vector_v = (0,0,0)
+            tmp_str_v = ''
+            if self.vra_type == self.RA.CLIMB:
+                if time.time() - self.clock > 1:
+                    # print("Climb")
+                    tmp_str_v= 'Climb'
+                    self.clock = time.time()
+                    tgt_vector_v = (0,0,3)
+            elif self.vra_type == self.RA.DESCEND:
+                if time.time() - self.clock > 1:
+                    tmp_str_v= 'Descend'
+                    self.clock = time.time()
+                    tgt_vector_v = (0,0,-3)
+
+            tgt_vector_h = (0,0,0)
+            tmp_str_h = ''
+            if self.hra_type == self.RA.TURN_LEFT:
+                # print(f"Turn Left {self.hra_val}")
+                # pass
+                tmp_str_h = f"Turn Left {self.hra_val}"
+                target_angle = self.hra_val
+                target_angle_rad = np.radians(target_angle)
+                x_off = np.sin(target_angle_rad) * 3
+                y_off = np.cos(target_angle_rad) * 3
+                tgt_vector_h = (x_off, y_off, 0)
+            elif self.hra_type == self.RA.TURN_RIGHT:
+                tmp_str_h = f"Turn Right {self.hra_val}"
+                target_angle = self.hra_val
+                target_angle_rad = np.radians(target_angle)
+                x_off = np.sin(target_angle_rad) * 3
+                y_off = np.cos(target_angle_rad) * 3
+                tgt_vector_h = (x_off, y_off, 0)
+
+            if self.ra_waypoint is None:
+                self.ra_waypoint = (self._position[0], self._position[1], self._position[2])
+            tgt = (
+                self.ra_waypoint[0] + tgt_vector_v[0] + tgt_vector_h[0], 
+                self.ra_waypoint[1] + tgt_vector_v[1] + tgt_vector_h[1], 
+                self.ra_waypoint[2] + tgt_vector_v[2] + tgt_vector_h[2]
+            )
+            self._target = tgt
+            self.ra_waypoint = tgt
+
+            if tmp_str_h != '' or tmp_str_v != '':
+                tmp_str = f"{self.uid}, {tmp_str_v}, {tmp_str_h}"
+                print(tmp_str)
 
     def _pre_plan(self) -> bool:
         return self._status == Agent.Status.IDLE and self._retry_time <= self.clk
@@ -223,6 +354,8 @@ class Agent(AutomatonBase):
             ret.append(("fail", {}))
         if self._status == Agent.Status.RELEASING:
             ret.append(("release", {"uid": self.uid, "releasable": self._free_contr}))
+        if self._pre_acas():
+            ret.append(("acas", {}))
 
         return ret
 

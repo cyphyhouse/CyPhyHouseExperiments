@@ -1,0 +1,10 @@
+world_name: "city.world"
+
+
+devices:
+# - {bot_name: "drone0", bot_type: "PLANE", init_pos: [0.0, -300.0, 3], 'init_yaw': 1.57079632679} 
+# - {bot_name: "drone1", bot_type: "PLANE", init_pos: [-258.3111, -272.7397, 3], 'init_yaw': 1.14119632679}
+
+- {bot_name: "drone0", bot_type: "PLANE", init_pos: [0.0, -50.0, 1], 'init_yaw': 1.57079632679} 
+- {bot_name: "drone1", bot_type: "PLANE", init_pos: [-50.0, -50.0, 1], 'init_yaw': 1.57079632679} 
+# - {bot_name: "drone1", bot_type: "PLANE", init_pos: [-175.0096673, -80.91324, 1], 'init_yaw': 1.14119632679}

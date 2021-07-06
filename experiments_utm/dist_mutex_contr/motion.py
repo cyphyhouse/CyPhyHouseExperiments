@@ -181,21 +181,37 @@ class MotionROSplane(MotionBase):
             plan.append(StampedRect(stamp=t_start+t_min, rect=rect, reaching_wp=False))
         return t_start+t_max
 
+    # def waypoints_to_plan(self, clk: float, way_points: List) -> List[StampedRect]:
+    #     ret = []  # type: List[StampedRect]
+    #     next_t_start = clk + 5.0
+    #     next_t_start = self._extend_contract_from_reachtube(ret, "takeoff", next_t_start)
+    #     # Shift the loitering contract to be after takeoff contract
+    #     next_t_start = self._extend_contract_from_reachtube(ret, "interchange", next_t_start)
+    #     next_t_start = self._extend_contract_from_reachtube(ret, "loiter", next_t_start)
+    #     next_t_start = self._extend_contract_from_reachtube(ret, "descend", next_t_start)
+
+    #     assert len(ret) > 0
+    #     last_rect = ret[-1].rect
+    #     ret.append(StampedRect(stamp=next_t_start, rect=last_rect, reaching_wp=True))
+    #     return ret
+    
     def waypoints_to_plan(self, clk: float, way_points: List) -> List[StampedRect]:
-        ret = []  # type: List[StampedRect]
-        next_t_start = clk + 5.0
-        next_t_start = self._extend_contract_from_reachtube(ret, "takeoff", next_t_start)
-        # Shift the loitering contract to be after takeoff contract
-        next_t_start = self._extend_contract_from_reachtube(ret, "interchange", next_t_start)
-        next_t_start = self._extend_contract_from_reachtube(ret, "loiter", next_t_start)
-        next_t_start = self._extend_contract_from_reachtube(ret, "descend", next_t_start)
+        ret = []
+        t_start = clk + 5.0
+        ref_t = 0
+        for wp in way_points:
+            xyz_min, xyz_max = (wp[0]-0.1, wp[1]-0.1, wp[2]-0.1), (wp[0]+0.1, wp[1]+0.1, wp[2]+0.1)
+            t_min, t_max = ref_t, ref_t + 0.01
+            rect = Rectangle(maxes=xyz_max, mins=xyz_min)
+            ret.append(StampedRect(stamp=t_start+t_min, rect = rect, reaching_wp = False))
+            t_start += t_max
+            ref_t += 1000
 
         assert len(ret) > 0
         last_rect = ret[-1].rect
-        ret.append(StampedRect(stamp=next_t_start, rect=last_rect, reaching_wp=True))
+        ret.append(StampedRect(stamp=t_start, rect=last_rect, reaching_wp=True))
         return ret
-
-
+    
 class MotionHectorQuad(MotionBase):
     BLOAT_WIDTH = 0.01
 

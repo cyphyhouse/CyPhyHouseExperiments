@@ -29,6 +29,14 @@ class AutomatonBase(abc.ABC):
     def _update_continuous_vars(self) -> None:
         self.__clk = rospy.Time.now()
 
+    def record_trajectory(self):
+        # raise NotImplementedError
+        pass
+
+    def dump_trajectory(self):
+        # raise NotImplementedError
+        pass
+    
     @property
     def clk(self) -> rospy.Time:
         return self.__clk
@@ -113,6 +121,7 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
         from .agent import Agent
         if isinstance(aut, Agent):
             aut.motion.register_ros_pub_sub()
+            aut.register_ra_subscriber()
 
             pose_topic_name = "/vrpn_client_node/%s/pose" % str(aut.uid)
 
@@ -132,6 +141,7 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
         while not stop_ev.is_set() and not aut.reached_sink_state():
             sleep(0.0)  # Yield to other threads
             # TODO avoid each iteration of while loop running indefinitely long
+            aut.record_trajectory()
 
             # Select an enabled action
             act = _select_act(aut, i_queue)
@@ -153,6 +163,7 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
 
             # Run transition of automaton
             aut.transition(act)
+        aut.dump_trajectory()
 
     except KeyboardInterrupt:
         print("KeyboardInterrupt.", end=' ')

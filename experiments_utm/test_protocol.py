@@ -13,6 +13,8 @@ import eceb_scenarios
 import city_scenarios
 import ACAS_scenarios
 
+import rospy
+
 def _multicast(mgr_queue_pair, agent_queue_list: List[Tuple[Queue, Queue]]) -> Sequence[bytes]:
     act_list = []
     mgr_i_q, mgr_o_q = mgr_queue_pair
@@ -36,6 +38,9 @@ def _multicast(mgr_queue_pair, agent_queue_list: List[Tuple[Queue, Queue]]) -> S
 
 
 def test_protocol(scenario: Dict[str, Tuple[MotionInitInfo, List]]) -> None:
+    print(scenario)
+    for uid, (init_info, wps) in scenario.items():
+        print(uid)
     stop_ev = Event()
 
     air_mgr = AirspaceManager()
@@ -132,17 +137,26 @@ def main(argv=None):
     else:
         argv = parser.parse_args(argv)
 
+    # rospy.init_node('utm_agents')
 
     # Include device init info from scene yaml file into scenarios
     world_name, device_info_map = __process_scene_yaml(argv.scene)
 
     # Select default waypoints based on world file. Change here to select different predefined waypoint paths
     if world_name == "city.world":
-        selected_scenario = ACAS_scenarios.ACAS_10
+        selected_scenario = city_scenarios.AIRPORT
         selected_agents = {
             'drone0',
             'drone1',
+            'plane0',
+            'plane1',
         }
+
+        # selected_scenario = ACAS_scenarios.ACAS_01_PLANE
+        # selected_agents = {
+        #     'drone0',
+        #     'drone1',
+        # }
     elif world_name == "eceb.world":
         selected_scenario = eceb_scenarios.SIMPLE_CORRIDOR
         selected_agents = {'drone0',
