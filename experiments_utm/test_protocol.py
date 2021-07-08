@@ -144,19 +144,19 @@ def main(argv=None):
 
     # Select default waypoints based on world file. Change here to select different predefined waypoint paths
     if world_name == "city.world":
-        selected_scenario = city_scenarios.AIRPORT
-        selected_agents = {
-            'drone0',
-            'drone1',
-            'plane0',
-            'plane1',
-        }
-
-        # selected_scenario = ACAS_scenarios.ACAS_01_PLANE
+        # selected_scenario = city_scenarios.AIRPORT
         # selected_agents = {
         #     'drone0',
         #     'drone1',
+        #     'plane0',
+        #     'plane1',
         # }
+
+        selected_scenario = ACAS_scenarios.ACAS_01_PLANE
+        selected_agents = {
+            'drone0',
+            'drone1',
+        }
     elif world_name == "eceb.world":
         selected_scenario = eceb_scenarios.SIMPLE_CORRIDOR
         selected_agents = {'drone0',

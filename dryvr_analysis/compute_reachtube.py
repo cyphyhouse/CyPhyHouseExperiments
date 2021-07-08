@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.7
 import os.path
 import pickle
 from typing import Any, Dict, Iterable, Optional

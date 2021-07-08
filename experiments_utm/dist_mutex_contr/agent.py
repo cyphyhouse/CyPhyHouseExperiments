@@ -45,6 +45,7 @@ class Agent(AutomatonBase):
         self.__uid = uid  # Set it as private to avoid being modified
         self.__motion = motion
         self.__way_points = deepcopy(waypoints)
+        self.__way_points_backup = deepcopy(waypoints)
 
         self._status = Agent.Status.IDLE
         self._plan = []  # type: List[StampedRect]
@@ -59,6 +60,7 @@ class Agent(AutomatonBase):
         # self.__motion.position may be modified by ROS subscribers concurrently
         # so we need self._position to stay the same during a transition
         self._position = self.__motion.position
+        self._orientation = self.__motion.orientation
 
         self.vra_type: str = ""
         self.hra_type: str = ""
@@ -180,61 +182,170 @@ class Agent(AutomatonBase):
         # return False
         return self._status == Agent.Status.ACAS or \
             (self._status == Agent.Status.MOVING and \
-            self.vra_type!='' or (self.hra_type!='' and self.hra_val is not None)) and \
-            self.__motion._device_init_info.bot_type!='PLANE'
+            self.vra_type!='' or (self.hra_type!='' and self.hra_val is not None))
+
+    def find_closest_waypoints(self, curr_pos, waypoint_list):
+        
+        curr_pos = np.array(deepcopy(curr_pos))
+        curr_waypoints = deepcopy(waypoint_list)
+        if len(curr_waypoints) >= 2:
+            tmp = np.linalg.norm(np.array(curr_waypoints[0]) - np.array(curr_waypoints[1]))
+            curr_waypoints.insert(0,(curr_waypoints[0][0], curr_waypoints[0][1]-tmp, curr_waypoints[0][2]))
+            tmp = np.linalg.norm(np.array(curr_waypoints[-1]) - np.array(curr_waypoints[-2]))
+            curr_waypoints.append((curr_waypoints[-1][0], curr_waypoints[-1][1]+tmp, curr_waypoints[-1][2]))
+        else:
+            curr_waypoints.insert(0,(curr_waypoints[0][0], curr_waypoints[0][1]-100, curr_waypoints[0][2]))
+            curr_waypoints.append((curr_waypoints[-1][0], curr_waypoints[-1][1]+100, curr_waypoints[-1][2]))
+        
+        curr_waypoints = np.array(curr_waypoints)
+        print(">>>>>>>>", curr_waypoints)
+        print(">>>>>>>>", curr_pos)
+        tmp = np.linalg.norm(curr_waypoints - curr_pos, axis = 1)
+        print(">>>>>>>>", tmp)
+        sorted_idx = np.argsort(tmp)
+        print(">>>>>>>>", sorted_idx)
+        return max(max(sorted_idx[0]-1, sorted_idx[1]-1),0)
+
+    def quaternion_to_euler(self, x, y, z, w):
+        t0 = +2.0 * (w * x + y * z)
+        t1 = +1.0 - 2.0 * (x * x + y * y)
+        roll = np.arctan2(t0, t1)
+        t2 = +2.0 * (w * y - z * x)
+        t2 = +1.0 if t2 > +1.0 else t2
+        t2 = -1.0 if t2 < -1.0 else t2
+        pitch = np.arcsin(t2)
+        t3 = +2.0 * (w * z + x * y)
+        t4 = +1.0 - 2.0 * (y * y + z * z)
+        yaw = np.arctan2(t3, t4)
+        return [roll, pitch, yaw]
 
     def _eff_acas(self) -> None:
-        if self.vra_type == '' and self.hra_type == '':
-            self.ra_waypoint = None
-            self._status = Agent.Status.RELEASING
+        if self.__motion._device_init_info.bot_type == 'PLANE':
+            if self.vra_type == '' and self.hra_type == '':
+                self.ra_waypoint = None
+                self._status = Agent.Status.RELEASING
+                waypoint_idx = self.find_closest_waypoints(self._position, self.__way_points_backup)
+                print(f">>>> waypoint idx for return{waypoint_idx}")
+                if waypoint_idx<len(self.__way_points_backup):
+                    self.__way_points = self.__way_points_backup[waypoint_idx:]
+                else:
+                    self.__way_points = []
+            else:
+                print("handling RA for plane 1")
+                self._status = Agent.Status.ACAS
+                tgt_waypoint_list = []
+                tgt_offset_v = (0,0,0)
+                tmp_str_v = ''
+                if self.vra_type == self.RA.CLIMB:
+                    curr_orientation = self._orientation
+                    tmp_str_v = 'Climb'
+                    # self.clock = time.time()
+                    roll, pitch, yaw = self.quaternion_to_euler(curr_orientation[0], curr_orientation[1], curr_orientation[2], curr_orientation[3])
+                    x_off = 200 * np.cos(np.pi/2 - yaw)
+                    y_off = 200 * np.sin(np.pi/2 - yaw)
+                    z_off = 30
+                    tgt_offset_v = (x_off, y_off, z_off)
+                if self.vra_type == self.RA.DESCEND:
+                    curr_orientation = self._orientation
+                    tmp_str_v = 'Descend'
+                    # self.clock = time.time()
+                    roll, pitch, yaw = self.quaternion_to_euler(curr_orientation[0], curr_orientation[1], curr_orientation[2], curr_orientation[3])
+                    x_off = 200 * np.cos(np.pi/2 - yaw)
+                    y_off = 200 * np.sin(np.pi/2 - yaw)
+                    z_off = -30
+                    tgt_offset_v = (x_off, y_off, z_off)
+                
+                tgt_offset_h = (0,0,0)
+                tmp_str_h = ''
+                if self.hra_type == self.RA.TURN_LEFT:
+                    tgt_offset_v = (0,0,tgt_offset_v[2])
+                    tmp_str_h = f"Turn Left {self.hra_val}"
+                    target_angel = self.hra_val
+                    target_angle_rad = np.radians(target_angle)
+                    x_off = np.cos(target_angle_rad) * 200
+                    y_off = np.sin(target_angle_rad) * 200
+                    tgt_offset_h = (x_off, y_off, 0)
+                elif self.vra_type == self.RA.TURN_RIGHT:
+                    tgt_offset_v = (0,0,tgt_offset_v[2])
+                    tmp_str_h = f"Turn Right {self.hra_val}"
+                    target_angle = self.hra_val
+                    target_angle_rad = np.radians(target_angle)
+                    x_off = np.cos(target_angle_rad) * 200
+                    y_off = np.sin(target_angle_rad) * 200
+                    tgt_offset_h = (x_off, y_off, 0)
+                
+                curr_pose = self._position
+                for i in range(1,5):
+                    tgt = (
+                        curr_pose[0] + i*tgt_offset_v[0] + i*tgt_offset_h[0],
+                        curr_pose[1] + i*tgt_offset_v[1] + i*tgt_offset_h[1],
+                        curr_pose[2] + i*tgt_offset_v[2] + i*tgt_offset_h[2]
+                    )
+                    tgt_waypoint_list.append(tgt)
+                
+                print("handling RA for plane 2")
+                if time.time() - self.clock > 1:
+                    tmp_str = f"{self.uid}, {tmp_str_v}, {tmp_str_h}"
+                    print(tmp_str)
+                    print("handling RA for plane 3")
+                
+                    rospy.logdebug("%s sending all waypoints %s." % (self, tgt_waypoint_list))
+                    self.__motion._first_flag = 1
+                    for tgt in tgt_waypoint_list:
+                        rospy.sleep(0.5)
+                        self._target = tgt
         else:
-            self._status = Agent.Status.ACAS
-            tgt_vector_v = (0,0,0)
-            tmp_str_v = ''
-            if self.vra_type == self.RA.CLIMB:
-                if time.time() - self.clock > 1:
-                    # print("Climb")
-                    tmp_str_v= 'Climb'
-                    self.clock = time.time()
-                    tgt_vector_v = (0,0,3)
-            elif self.vra_type == self.RA.DESCEND:
-                if time.time() - self.clock > 1:
-                    tmp_str_v= 'Descend'
-                    self.clock = time.time()
-                    tgt_vector_v = (0,0,-3)
+            if self.vra_type == '' and self.hra_type == '':
+                self.ra_waypoint = None
+                self._status = Agent.Status.RELEASING
+            else:
+                self._status = Agent.Status.ACAS
+                tgt_vector_v = (0,0,0)
+                tmp_str_v = ''
+                if self.vra_type == self.RA.CLIMB:
+                    if time.time() - self.clock > 1:
+                        # print("Climb")
+                        tmp_str_v= 'Climb'
+                        self.clock = time.time()
+                        tgt_vector_v = (0,0,3)
+                elif self.vra_type == self.RA.DESCEND:
+                    if time.time() - self.clock > 1:
+                        tmp_str_v= 'Descend'
+                        self.clock = time.time()
+                        tgt_vector_v = (0,0,-3)
 
-            tgt_vector_h = (0,0,0)
-            tmp_str_h = ''
-            if self.hra_type == self.RA.TURN_LEFT:
-                # print(f"Turn Left {self.hra_val}")
-                # pass
-                tmp_str_h = f"Turn Left {self.hra_val}"
-                target_angle = self.hra_val
-                target_angle_rad = np.radians(target_angle)
-                x_off = np.sin(target_angle_rad) * 3
-                y_off = np.cos(target_angle_rad) * 3
-                tgt_vector_h = (x_off, y_off, 0)
-            elif self.hra_type == self.RA.TURN_RIGHT:
-                tmp_str_h = f"Turn Right {self.hra_val}"
-                target_angle = self.hra_val
-                target_angle_rad = np.radians(target_angle)
-                x_off = np.sin(target_angle_rad) * 3
-                y_off = np.cos(target_angle_rad) * 3
-                tgt_vector_h = (x_off, y_off, 0)
+                tgt_vector_h = (0,0,0)
+                tmp_str_h = ''
+                if self.hra_type == self.RA.TURN_LEFT:
+                    # print(f"Turn Left {self.hra_val}")
+                    # pass
+                    tmp_str_h = f"Turn Left {self.hra_val}"
+                    target_angle = self.hra_val
+                    target_angle_rad = np.radians(target_angle)
+                    x_off = np.sin(target_angle_rad) * 3
+                    y_off = np.cos(target_angle_rad) * 3
+                    tgt_vector_h = (x_off, y_off, 0)
+                elif self.hra_type == self.RA.TURN_RIGHT:
+                    tmp_str_h = f"Turn Right {self.hra_val}"
+                    target_angle = self.hra_val
+                    target_angle_rad = np.radians(target_angle)
+                    x_off = np.sin(target_angle_rad) * 3
+                    y_off = np.cos(target_angle_rad) * 3
+                    tgt_vector_h = (x_off, y_off, 0)
 
-            if self.ra_waypoint is None:
-                self.ra_waypoint = (self._position[0], self._position[1], self._position[2])
-            tgt = (
-                self.ra_waypoint[0] + tgt_vector_v[0] + tgt_vector_h[0], 
-                self.ra_waypoint[1] + tgt_vector_v[1] + tgt_vector_h[1], 
-                self.ra_waypoint[2] + tgt_vector_v[2] + tgt_vector_h[2]
-            )
-            self._target = tgt
-            self.ra_waypoint = tgt
+                if self.ra_waypoint is None:
+                    self.ra_waypoint = (self._position[0], self._position[1], self._position[2])
+                tgt = (
+                    self.ra_waypoint[0] + tgt_vector_v[0] + tgt_vector_h[0], 
+                    self.ra_waypoint[1] + tgt_vector_v[1] + tgt_vector_h[1], 
+                    self.ra_waypoint[2] + tgt_vector_v[2] + tgt_vector_h[2]
+                )
+                self._target = tgt
+                self.ra_waypoint = tgt
 
-            if tmp_str_h != '' or tmp_str_v != '':
-                tmp_str = f"{self.uid}, {tmp_str_v}, {tmp_str_h}"
-                print(tmp_str)
+                if tmp_str_h != '' or tmp_str_v != '':
+                    tmp_str = f"{self.uid}, {tmp_str_v}, {tmp_str_h}"
+                    print(tmp_str)
 
     def _pre_plan(self) -> bool:
         return self._status == Agent.Status.IDLE and self._retry_time <= self.clk
@@ -269,9 +380,11 @@ class Agent(AutomatonBase):
 
                 if(self.__motion._device_init_info.bot_type=='PLANE'):
                     rospy.logdebug("%s sending all waypoints %s." % (self, self.__way_points))
+                    self.__motion._first_flag = 1
                     for tgt in self.__way_points:
                         rospy.sleep(0.5)
                         self._target = tgt
+                    self.__way_points_backup = deepcopy(self.__way_points)
                     self.__way_points.clear()
 
                 else:
@@ -297,6 +410,7 @@ class Agent(AutomatonBase):
         if(self.__motion._device_init_info.bot_type=='PLANE'):
             if prev.reaching_wp:
                 rospy.logdebug("%s going to next region %s." % (self, prev.rect))
+                print(f"agent {self.uid} reaching waypoint {tgt}")
         else:
             if prev.reaching_wp and self.__way_points:
                 tgt = self.__way_points.pop(0)
