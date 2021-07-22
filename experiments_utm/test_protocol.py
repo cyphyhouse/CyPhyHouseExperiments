@@ -152,7 +152,7 @@ def main(argv=None):
         #     'plane1',
         # }
 
-        selected_scenario = ACAS_scenarios.ACAS_01_PLANE
+        selected_scenario = ACAS_scenarios.ACAS_01
         selected_agents = {
             'drone0',
             'drone1',

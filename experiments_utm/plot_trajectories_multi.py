@@ -39,6 +39,7 @@ class Plotter:
             x_acas = []
             y_acas = []
             z_acas = []
+            trajectory = trajectory[:2000000]
             for point in trajectory:
                 x.append(point[0][0])
                 y.append(point[0][1])
@@ -65,6 +66,7 @@ class Plotter:
     def plot3d(trajectory_list: List[List[Tuple[float, float, float]]]):
         ax = a3.Axes3D(plt.figure())
         for idx, trajectory in enumerate(trajectory_list):
+            trajectory = trajectory[:2000000]
             for j in range(0,(len(trajectory)-100),100):
                 xllim, xtlim = ax.get_xlim()
                 yllim, ytlim = ax.get_ylim()
@@ -83,21 +85,21 @@ class Plotter:
 
 def plot_trajectories(fn_list):
     trajectory_list = []
-    for i in range(5):
+    for i in range(4):
         for fn in fn_list:
             fn = fn + f"_{i}"   
             with open(fn, 'rb') as f:
                 tmp = pickle.load(f)
                 trajectory_list.append(tmp)    
     plot = Plotter()
-    plot.plot2d(trajectory_list)
-    # plot.plot3d(trajectory_list)
+    # plot.plot2d(trajectory_list)
+    plot.plot3d(trajectory_list)
 
 if __name__ == "__main__":
     fn_list = [
-        './trajectories/trajectories_acas06/drone0',
-        './trajectories/trajectories_acas06/drone1',
-        './trajectories/trajectories_acas01/drone0',
-        './trajectories/trajectories_acas01/drone1',
+        # './trajectories/trajectories_acas06/drone0',
+        # './trajectories/trajectories_acas06/drone1',
+        './trajectories/acas_01_plane/drone0',
+        './trajectories/acas_01_plane/drone1',
     ]
     plot_trajectories(fn_list)

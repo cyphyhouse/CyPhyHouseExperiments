@@ -5,7 +5,7 @@ from queue import Empty
 from typing import Any, Dict, List, Optional, Tuple
 
 # TODO avoid importing rospy if not using ROS
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, TwistStamped
 from reachtube import Contract
 from rosgraph_msgs.msg import Clock
 import rospy
@@ -124,13 +124,21 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
             aut.register_ra_subscriber()
 
             pose_topic_name = "/vrpn_client_node/%s/pose" % str(aut.uid)
+            twist_topic_name = "/vrpn_client_node/%s/twist" % str(aut.uid)
 
             def update_pose(data: PoseStamped):
                 aut.motion.position = data.pose.position
                 aut.motion.orientation = data.pose.orientation
+                
+            def update_twist(data: TwistStamped):
+                # print("!!!!!!!!!!", data)
+                aut._linear_velocity = (data.twist.linear.x, data.twist.linear.y, data.twist.linear.z)
+                aut._angular_velocity = data.twist.angular
+                # print(f"{aut.uid}, !!!!!!!!!!", aut._linear_velocity)
 
             # NOTE This creates a thread in this process
             rospy.Subscriber(pose_topic_name, PoseStamped, update_pose, queue_size=10)
+            rospy.Subscriber(twist_topic_name, TwistStamped, update_twist, queue_size=10)
 
             rospy.logdebug("%s: waiting for the first position message" % repr(aut))
             rospy.wait_for_message(pose_topic_name, PoseStamped)

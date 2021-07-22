@@ -61,6 +61,10 @@ class Agent(AutomatonBase):
         # so we need self._position to stay the same during a transition
         self._position = self.__motion.position
         self._orientation = self.__motion.orientation
+        self._linear_velocity = (0,0,0)
+        self._angular_velocity = (0,0,0)
+
+        self.record_linear_v = (0,0,0)
 
         self.vra_type: str = ""
         self.hra_type: str = ""
@@ -70,12 +74,26 @@ class Agent(AutomatonBase):
         self.ra_waypoint = None
 
         self.trajectory = []
+        self.received_ra_list = []
+        self.handled_ra_list = []
+        
+        fn = f'./trajectories/{self.uid}_agent_acas_received'
+        f = open(fn, 'wb+')
+        f.close()
+        fn = f'./trajectories/{self.uid}_agent_acas_handled'
+        f = open(fn, 'wb+')
+        f.close()
+        
 
     def register_ra_subscriber(self):
         self._acas_ra_sub = rospy.Subscriber('/acas/ra', String, self.__acas_ra_handler)        
 
     def __acas_ra_handler(self, data):
         raw_ra_string = data.data
+        # self.received_ra_list.append((time.time(), raw_ra_string))
+        fn = f'./trajectories/{self.uid}_agent_acas_received'
+        with open(fn, "ab+") as f:
+            pickle.dump((time.time(), raw_ra_string), f)
         # print(raw_ra_string)
         raw_ra_string = raw_ra_string.split(',')
         # print(raw_ra_string)
@@ -113,6 +131,13 @@ class Agent(AutomatonBase):
         fn = f'./trajectories/{self.uid}'
         with open(fn,'wb+') as f:
             pickle.dump(self.trajectory, f)
+        # fn = f'./trajectories/{self.uid}_agent_acas_received'
+        # with open(fn,'wb+') as f:
+        #     pickle.dump(self.received_ra_list, f)
+        # fn = f'./trajectories/{self.uid}_agent_acas_handled'
+        # with open(fn,'wb+') as f:
+        #     pickle.dump(self.handled_ra_list, f)
+        
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + "_" + str(self.uid)
@@ -123,7 +148,7 @@ class Agent(AutomatonBase):
 
     @_target.setter
     def _target(self, p: Tuple[float, float, float]) -> None:
-        print(f'sending target for agent {self.__uid} type {self.__motion._device_init_info.bot_type}')
+        # print(f'sending target for agent {self.__uid} type {self.__motion._device_init_info.bot_type}')
         self.__motion.send_target(p)
 
     @property
@@ -232,7 +257,13 @@ class Agent(AutomatonBase):
                     self.__way_points = []
             else:
                 print("handling RA for plane 1")
+                print("^^^^^^^^^^^", self._linear_velocity)
+                if self._status != Agent.Status.ACAS:
+                    self.record_linear_v = deepcopy(self._linear_velocity)
                 self._status = Agent.Status.ACAS
+                curr_linear_v = self.record_linear_v
+                print("---------->", curr_linear_v, self._linear_velocity, self._position)
+                curr_speed = np.sqrt(curr_linear_v[0]**2 + curr_linear_v[1]**2)
                 tgt_waypoint_list = []
                 tgt_offset_v = (0,0,0)
                 tmp_str_v = ''
@@ -241,26 +272,28 @@ class Agent(AutomatonBase):
                     tmp_str_v = 'Climb'
                     # self.clock = time.time()
                     roll, pitch, yaw = self.quaternion_to_euler(curr_orientation[0], curr_orientation[1], curr_orientation[2], curr_orientation[3])
-                    x_off = 200 * np.cos(np.pi/2 - yaw)
-                    y_off = 200 * np.sin(np.pi/2 - yaw)
+                    x_off = curr_speed*30 * np.cos(np.pi/2 - yaw)
+                    y_off = curr_speed*30 * np.sin(np.pi/2 - yaw)
                     z_off = 30
                     tgt_offset_v = (x_off, y_off, z_off)
+                    print("############", tgt_offset_v)
                 if self.vra_type == self.RA.DESCEND:
                     curr_orientation = self._orientation
                     tmp_str_v = 'Descend'
                     # self.clock = time.time()
                     roll, pitch, yaw = self.quaternion_to_euler(curr_orientation[0], curr_orientation[1], curr_orientation[2], curr_orientation[3])
-                    x_off = 200 * np.cos(np.pi/2 - yaw)
-                    y_off = 200 * np.sin(np.pi/2 - yaw)
+                    x_off = curr_speed*30 * np.cos(np.pi/2 - yaw)
+                    y_off = curr_speed*30 * np.sin(np.pi/2 - yaw)
                     z_off = -30
                     tgt_offset_v = (x_off, y_off, z_off)
+                    print("############", tgt_offset_v)
                 
                 tgt_offset_h = (0,0,0)
                 tmp_str_h = ''
                 if self.hra_type == self.RA.TURN_LEFT:
                     tgt_offset_v = (0,0,tgt_offset_v[2])
                     tmp_str_h = f"Turn Left {self.hra_val}"
-                    target_angel = self.hra_val
+                    target_angle = self.hra_val
                     target_angle_rad = np.radians(target_angle)
                     x_off = np.cos(target_angle_rad) * 200
                     y_off = np.sin(target_angle_rad) * 200
@@ -287,6 +320,10 @@ class Agent(AutomatonBase):
                 if time.time() - self.clock > 1:
                     tmp_str = f"{self.uid}, {tmp_str_v}, {tmp_str_h}"
                     print(tmp_str)
+                    # self.handled_ra_list.append((time.time(), tmp_str))
+                    fn = f'./trajectories/{self.uid}_agent_acas_handled'
+                    with open(fn, 'ab+') as f:
+                        pickle.dump((time.time(), tmp_str), f)
                     print("handling RA for plane 3")
                 
                     rospy.logdebug("%s sending all waypoints %s." % (self, tgt_waypoint_list))
@@ -299,20 +336,20 @@ class Agent(AutomatonBase):
                 self.ra_waypoint = None
                 self._status = Agent.Status.RELEASING
             else:
+                if self._status != Agent.Status.ACAS:
+                    self.record_linear_v = deepcopy(self._linear_velocity)
                 self._status = Agent.Status.ACAS
+                curr_linear_v = self.record_linear_v
                 tgt_vector_v = (0,0,0)
                 tmp_str_v = ''
                 if self.vra_type == self.RA.CLIMB:
-                    if time.time() - self.clock > 1:
-                        # print("Climb")
-                        tmp_str_v= 'Climb'
-                        self.clock = time.time()
-                        tgt_vector_v = (0,0,3)
+                    tmp_str_v= 'Climb'
+                    tgt_vector_v = (curr_linear_v[0],curr_linear_v[1],3)
                 elif self.vra_type == self.RA.DESCEND:
-                    if time.time() - self.clock > 1:
-                        tmp_str_v= 'Descend'
-                        self.clock = time.time()
-                        tgt_vector_v = (0,0,-3)
+                    # if time.time() - self.clock > 1:
+                    tmp_str_v= 'Descend'
+                    # self.clock = time.time()
+                    tgt_vector_v = (curr_linear_v[0],curr_linear_v[1],-3)
 
                 tgt_vector_h = (0,0,0)
                 tmp_str_h = ''
@@ -321,18 +358,21 @@ class Agent(AutomatonBase):
                     # pass
                     tmp_str_h = f"Turn Left {self.hra_val}"
                     target_angle = self.hra_val
+                    curr_speed = np.sqrt(curr_linear_v[0]**2+curr_linear_v[1]**2)
                     target_angle_rad = np.radians(target_angle)
-                    x_off = np.sin(target_angle_rad) * 3
-                    y_off = np.cos(target_angle_rad) * 3
+                    x_off = np.sin(target_angle_rad) * curr_speed
+                    y_off = np.cos(target_angle_rad) * curr_speed
                     tgt_vector_h = (x_off, y_off, 0)
                 elif self.hra_type == self.RA.TURN_RIGHT:
                     tmp_str_h = f"Turn Right {self.hra_val}"
                     target_angle = self.hra_val
+                    curr_speed = np.sqrt(curr_linear_v[0]**2+curr_linear_v[1]**2)
                     target_angle_rad = np.radians(target_angle)
-                    x_off = np.sin(target_angle_rad) * 3
-                    y_off = np.cos(target_angle_rad) * 3
+                    x_off = np.sin(target_angle_rad) * curr_speed
+                    y_off = np.cos(target_angle_rad) * curr_speed
                     tgt_vector_h = (x_off, y_off, 0)
 
+                
                 if self.ra_waypoint is None:
                     self.ra_waypoint = (self._position[0], self._position[1], self._position[2])
                 tgt = (
@@ -340,12 +380,19 @@ class Agent(AutomatonBase):
                     self.ra_waypoint[1] + tgt_vector_v[1] + tgt_vector_h[1], 
                     self.ra_waypoint[2] + tgt_vector_v[2] + tgt_vector_h[2]
                 )
-                self._target = tgt
-                self.ra_waypoint = tgt
+                
+                if time.time() - self.clock > 0.1:
+                    self._target = tgt
+                    self.ra_waypoint = tgt
+                    self.clock = time.time()
 
-                if tmp_str_h != '' or tmp_str_v != '':
+                # if tmp_str_h != '' or tmp_str_v != '':
                     tmp_str = f"{self.uid}, {tmp_str_v}, {tmp_str_h}"
                     print(tmp_str)
+                    # self.handled_ra_list.append((time.time(), tmp_str))
+                    fn = f'./trajectories/{self.uid}_agent_acas_handled'
+                    with open(fn, 'ab+') as f:
+                        pickle.dump((time.time(), tmp_str), f)
 
     def _pre_plan(self) -> bool:
         return self._status == Agent.Status.IDLE and self._retry_time <= self.clk

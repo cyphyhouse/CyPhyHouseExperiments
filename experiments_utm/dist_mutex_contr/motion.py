@@ -10,7 +10,7 @@ from threading import RLock
 from typing import Mapping, NamedTuple, Tuple, Type, Union, List
 
 from actionlib import GoalStatus, SimpleActionClient, SimpleGoalState
-from geometry_msgs.msg import Point, PoseStamped, Quaternion
+from geometry_msgs.msg import Point, PoseStamped, Quaternion, Vector3
 from hector_uav_msgs.msg import LandingAction, LandingGoal, \
     PoseAction, PoseGoal, TakeoffAction, TakeoffGoal
 from rosplane_msgs.msg import Waypoint
@@ -39,6 +39,8 @@ class MotionBase(abc.ABC):
         self._device_init_info = device_init_info
         self._position = device_init_info.position  # type: Tuple[float, float, float]
         self._orientation = (0.0, 0.0, 0.0, 1.0)  # TODO compute Quaternion from initial yaw
+        self._linear_velocity = (0,0,0)
+        self._angular_velocity = (0,0,0)
 
     @abc.abstractmethod
     def register_ros_pub_sub(self) -> None:
@@ -81,6 +83,33 @@ class MotionBase(abc.ABC):
         # NOTE the lock may be redundant because assigning references should be atomic
         with self._var_lock:
             self._position = p
+
+    @property
+    def linear_velocity(self) -> Tuple[float, float, float]:
+        with self._var_lock:
+            print("$$$$$$$$", self._linear_velocity)
+            return deepcopy(self._linear_velocity)
+
+    @linear_velocity.setter
+    def linear_velocity(self, p: Union[Vector3, Tuple[float, float, float]]) -> None:
+        if isinstance(p, Vector3):
+            p = (p.x, p.y, p.z)
+
+        with self._var_lock:
+            self._linear_velocity = p
+
+    @property
+    def angular_velocity(self) -> Tuple[float, float, float]:
+        with self._var_lock:
+            return deepcopy(self._angular_velocity)
+
+    @angular_velocity.setter
+    def angular_velocity(self, p: Union[Vector3, Tuple[float, float, float]]) -> None:
+        if isinstance(p, Vector3):
+            p = (p.x, p.y, p.z)
+
+        with self._var_lock:
+            self._angular_velocity = p
 
     @abc.abstractmethod
     def landing(self) -> None:
@@ -295,7 +324,8 @@ class MotionHectorQuad(MotionBase):
             d = float(euclidean(prev_p, p))
             # if reach, the drone is slowing down. if prev_reach, the drone should have slowed down
             # Therefore, the deadline is more relaxed.
-            deadline = deadline_list[-1] + d * (0.7 if prev_reach else 0.3 if reach else 0.2)
+            # deadline = deadline_list[-1] + d * (0.7 if prev_reach else 0.3 if reach else 0.2)
+            deadline = deadline_list[-1] + d * 0.2
             deadline_list.append(deadline)
             prev_p, prev_reach = p, reach
 

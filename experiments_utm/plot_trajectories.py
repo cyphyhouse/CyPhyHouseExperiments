@@ -39,6 +39,7 @@ class Plotter:
             x_acas = []
             y_acas = []
             z_acas = []
+            trajectory = trajectory[:2000000]
             for point in trajectory:
                 x.append(point[0][0])
                 y.append(point[0][1])
@@ -50,12 +51,14 @@ class Plotter:
                 else:
                     x_normal.append(point[0][0])
                     y_normal.append(point[0][1])
-                    z_normal.append(point[0][2])   
+                    z_normal.append(point[0][2])  
+                    z_acas.append(float('NAN'))
             plt.figure(0)
             plt.plot(x,y,Plotter.colors[idx%2])
             plt.plot(x_acas, y_acas, 'r.')
             plt.figure(1)
             plt.plot(z,Plotter.colors[idx%2])
+            plt.plot(z_acas, 'r.')
 
         plt.show()
 
@@ -75,7 +78,7 @@ class Plotter:
                 ax.set_ylim(np.min(y)-1, np.max(y)+1)
                 ax.set_zlim(np.min(z)-1, np.max(z)+1)
 
-                Plotter.plot_line_3d(trajectory[j], trajectory[j+100], ax, Plotter.colors[idx%2])
+                Plotter.plot_line_3d(trajectory[j][0], trajectory[j+100][0], ax, Plotter.colors[idx%2])
         plt.show()
         pass
 
@@ -90,7 +93,7 @@ def plot_trajectories(fn_list):
 
 if __name__ == "__main__":
     fn_list = [
-        './trajectories/drone0_0',
-        './trajectories/drone1_0',
+        './trajectories/drone0',
+        './trajectories/drone1',
     ]
     plot_trajectories(fn_list)
