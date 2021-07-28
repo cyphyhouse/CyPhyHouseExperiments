@@ -23,7 +23,7 @@ class Plotter:
         ax.add_line(line)
 
     @staticmethod
-    def plot2d(trajectory_list: List[List[Tuple[float, float, float]]]):
+    def plot2d(trajectory_list: List[List[Tuple[float, float, float]]], color = 'r'):
 
         # agents_tubes = [[segment.tube for segment in segment_list] for segment_list in tubes]
         # pdb.set_trace()
@@ -56,17 +56,18 @@ class Plotter:
                     z_acas.append(float('NAN'))
             plt.figure(0)
             plt.plot(x,y,Plotter.colors[idx%2])
-            plt.plot(x_acas, y_acas, 'r.')
+            plt.plot(x_acas, y_acas, '.', color=color)
             plt.figure(1)
             plt.plot(z,Plotter.colors[idx%2])
-            plt.plot(z_acas, 'r.')
+            plt.plot(z_acas, '.', color=color)
 
-        plt.show()
+        # plt.show()
 
     @staticmethod
     def plot3d(trajectory_list: List[List[Tuple[float, float, float]]]):
         ax = a3.Axes3D(plt.figure())
         for idx, trajectory in enumerate(trajectory_list):
+            trajectory = trajectory[:2000000]
             for j in range(0,(len(trajectory)-100),100):
                 xllim, xtlim = ax.get_xlim()
                 yllim, ytlim = ax.get_ylim()
@@ -83,18 +84,49 @@ class Plotter:
         plt.show()
         pass
 
-def plot_trajectories(fn_list):
+def plot_trajectories(fn_list, fn_pb_list):
     trajectory_list = []
-    for fn in fn_list:   
-        with open(fn, 'rb') as f:
-            tmp = pickle.load(f)
-            trajectory_list.append(tmp)    
+    for i in range(10):
+        for fn in fn_list:
+            fn = fn + f"_{i}"   
+            with open(fn, 'rb') as f:
+                tmp = pickle.load(f)
+                trajectory_list.append(tmp)    
     plot = Plotter()
     plot.plot2d(trajectory_list)
 
+
+    trajectory_list = []
+    # for i in range(10):
+        # for fn in fn_pb_list:   
+        #     fn = fn + f"_{i}"   
+        #     tmp = []
+        #     with open(fn, 'rb') as f:
+        #         while 1:
+        #             try:
+        #                 tmp.append(pickle.load(f))
+        #             except EOFError:
+        #                 break   
+        #     trajectory_list.append(tmp)
+    for i in range(10):
+        for fn in fn_pb_list:
+            fn = fn + f"_{i}"   
+            with open(fn, 'rb') as f:
+                tmp = pickle.load(f)
+                trajectory_list.append(tmp)    
+    plot.plot2d(trajectory_list, color = 'tab:orange')
+    plt.show()
+    # plot.plot3d(trajectory_list)
+
 if __name__ == "__main__":
     fn_list = [
-        './trajectories/drone0',
-        './trajectories/drone1',
+        # './trajectories/trajectories_acas06/drone0',
+        # './trajectories/trajectories_acas06/drone1',
+        './trajectories/rotation_transform/drone0',
+        './trajectories/rotation_transform/drone1',
     ]
-    plot_trajectories(fn_list)
+    fn_pb_list = [
+        './trajectories/rotation_playback/drone0_pb',
+        './trajectories/rotation_playback/drone1_pb',
+    ]
+    plot_trajectories(fn_list, fn_pb_list)

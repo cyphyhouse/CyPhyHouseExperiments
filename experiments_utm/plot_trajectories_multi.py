@@ -41,17 +41,18 @@ class Plotter:
             z_acas = []
             trajectory = trajectory[:2000000]
             for point in trajectory:
-                x.append(point[0][0])
-                y.append(point[0][1])
-                z.append(point[0][2])
-                if point[1] == 1:
-                    x_acas.append(point[0][0])
-                    y_acas.append(point[0][1])
-                    z_acas.append(point[0][2])
+                x.append(point[1])
+                y.append(point[2])
+                z.append(point[3])
+                # print(point[4])
+                if point[5] == 1:
+                    x_acas.append(point[1])
+                    y_acas.append(point[2])
+                    z_acas.append(point[3])
                 else:
-                    x_normal.append(point[0][0])
-                    y_normal.append(point[0][1])
-                    z_normal.append(point[0][2])   
+                    x_normal.append(point[1])
+                    y_normal.append(point[2])
+                    z_normal.append(point[3])  
                     z_acas.append(float('NAN'))
             plt.figure(0)
             plt.plot(x,y,Plotter.colors[idx%2])
@@ -85,21 +86,21 @@ class Plotter:
 
 def plot_trajectories(fn_list):
     trajectory_list = []
-    for i in range(4):
+    for i in range(10):
         for fn in fn_list:
             fn = fn + f"_{i}"   
             with open(fn, 'rb') as f:
                 tmp = pickle.load(f)
                 trajectory_list.append(tmp)    
     plot = Plotter()
-    # plot.plot2d(trajectory_list)
-    plot.plot3d(trajectory_list)
+    plot.plot2d(trajectory_list)
+    # plot.plot3d(trajectory_list)
 
 if __name__ == "__main__":
     fn_list = [
         # './trajectories/trajectories_acas06/drone0',
         # './trajectories/trajectories_acas06/drone1',
-        './trajectories/acas_01_plane/drone0',
-        './trajectories/acas_01_plane/drone1',
+        './trajectories/rotation_simulations/drone0',
+        './trajectories/rotation_simulations/drone1',
     ]
     plot_trajectories(fn_list)

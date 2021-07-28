@@ -122,10 +122,24 @@ class Agent(AutomatonBase):
                     self.hra_val = float(val_string[1].strip())
 
     def record_trajectory(self):
+        tmp_str_v = ''
+        if self.vra_type == self.RA.CLIMB:
+            tmp_str_v= 'Climb'
+        elif self.vra_type == self.RA.DESCEND:
+            tmp_str_v= 'Descend'
+
+        tmp_str_h = ''
+        if self.hra_type == self.RA.TURN_LEFT:
+            tmp_str_h = f"Turn Left {self.hra_val}"
+        elif self.vra_type == self.RA.TURN_RIGHT:
+            tmp_str_h = f"Turn Right {self.hra_val}"
+            
+        tmp_str = f"{self.uid}, {tmp_str_v}, {tmp_str_h}"
+        
         if self._status == Agent.Status.ACAS:
-            self.trajectory.append([deepcopy(self._position),1])
+            self.trajectory.append([time.time(), self._position[0], self._position[1], self._position[2], tmp_str, 1])
         else:
-            self.trajectory.append([deepcopy(self._position),0])
+            self.trajectory.append([time.time(), self._position[0], self._position[1], self._position[2], tmp_str, 0])
 
     def dump_trajectory(self):
         fn = f'./trajectories/{self.uid}'
@@ -261,7 +275,7 @@ class Agent(AutomatonBase):
                 if self._status != Agent.Status.ACAS:
                     self.record_linear_v = deepcopy(self._linear_velocity)
                 self._status = Agent.Status.ACAS
-                curr_linear_v = self.record_linear_v
+                curr_linear_v = deepcopy(self._linear_velocity)
                 print("---------->", curr_linear_v, self._linear_velocity, self._position)
                 curr_speed = np.sqrt(curr_linear_v[0]**2 + curr_linear_v[1]**2)
                 tgt_waypoint_list = []
@@ -272,20 +286,20 @@ class Agent(AutomatonBase):
                     tmp_str_v = 'Climb'
                     # self.clock = time.time()
                     roll, pitch, yaw = self.quaternion_to_euler(curr_orientation[0], curr_orientation[1], curr_orientation[2], curr_orientation[3])
-                    x_off = curr_speed*30 * np.cos(np.pi/2 - yaw)
-                    y_off = curr_speed*30 * np.sin(np.pi/2 - yaw)
-                    z_off = 30
-                    tgt_offset_v = (x_off, y_off, z_off)
+                    x_off = curr_speed*5 * np.cos(np.pi/2 - yaw)
+                    y_off = curr_speed*5 * np.sin(np.pi/2 - yaw)
+                    z_off = 15
+                    tgt_offset_v = (curr_linear_v[0]*5, curr_linear_v[1]*5, z_off)
                     print("############", tgt_offset_v)
                 if self.vra_type == self.RA.DESCEND:
                     curr_orientation = self._orientation
                     tmp_str_v = 'Descend'
                     # self.clock = time.time()
                     roll, pitch, yaw = self.quaternion_to_euler(curr_orientation[0], curr_orientation[1], curr_orientation[2], curr_orientation[3])
-                    x_off = curr_speed*30 * np.cos(np.pi/2 - yaw)
-                    y_off = curr_speed*30 * np.sin(np.pi/2 - yaw)
-                    z_off = -30
-                    tgt_offset_v = (x_off, y_off, z_off)
+                    x_off = curr_speed*5 * np.cos(np.pi/2 - yaw)
+                    y_off = curr_speed*5 * np.sin(np.pi/2 - yaw)
+                    z_off = -15
+                    tgt_offset_v = (curr_linear_v[0]*5, curr_linear_v[1]*5, z_off)
                     print("############", tgt_offset_v)
                 
                 tgt_offset_h = (0,0,0)
@@ -295,8 +309,8 @@ class Agent(AutomatonBase):
                     tmp_str_h = f"Turn Left {self.hra_val}"
                     target_angle = self.hra_val
                     target_angle_rad = np.radians(target_angle)
-                    x_off = np.cos(target_angle_rad) * 200
-                    y_off = np.sin(target_angle_rad) * 200
+                    x_off = np.cos(target_angle_rad) * 30
+                    y_off = np.sin(target_angle_rad) * 30
                     tgt_offset_h = (x_off, y_off, 0)
                 elif self.vra_type == self.RA.TURN_RIGHT:
                     tgt_offset_v = (0,0,tgt_offset_v[2])
@@ -358,7 +372,7 @@ class Agent(AutomatonBase):
                     # pass
                     tmp_str_h = f"Turn Left {self.hra_val}"
                     target_angle = self.hra_val
-                    curr_speed = np.sqrt(curr_linear_v[0]**2+curr_linear_v[1]**2)
+                    curr_speed = np.sqrt(curr_linear_v[0]**2+curr_linear_v[1]**2)+3
                     target_angle_rad = np.radians(target_angle)
                     x_off = np.sin(target_angle_rad) * curr_speed
                     y_off = np.cos(target_angle_rad) * curr_speed
@@ -366,22 +380,24 @@ class Agent(AutomatonBase):
                 elif self.hra_type == self.RA.TURN_RIGHT:
                     tmp_str_h = f"Turn Right {self.hra_val}"
                     target_angle = self.hra_val
-                    curr_speed = np.sqrt(curr_linear_v[0]**2+curr_linear_v[1]**2)
+                    curr_speed = np.sqrt(curr_linear_v[0]**2+curr_linear_v[1]**2)+3
                     target_angle_rad = np.radians(target_angle)
                     x_off = np.sin(target_angle_rad) * curr_speed
                     y_off = np.cos(target_angle_rad) * curr_speed
                     tgt_vector_h = (x_off, y_off, 0)
 
                 
-                if self.ra_waypoint is None:
-                    self.ra_waypoint = (self._position[0], self._position[1], self._position[2])
+                # if self.ra_waypoint is None:
+                #     self.ra_waypoint = (self._position[0], self._position[1], self._position[2])
+                
                 tgt = (
-                    self.ra_waypoint[0] + tgt_vector_v[0] + tgt_vector_h[0], 
-                    self.ra_waypoint[1] + tgt_vector_v[1] + tgt_vector_h[1], 
-                    self.ra_waypoint[2] + tgt_vector_v[2] + tgt_vector_h[2]
+                    self._position[0] + tgt_vector_v[0] + tgt_vector_h[0], 
+                    self._position[1] + tgt_vector_v[1] + tgt_vector_h[1], 
+                    self._position[2] + tgt_vector_v[2] + tgt_vector_h[2]
                 )
                 
                 if time.time() - self.clock > 0.1:
+                    print(tgt)
                     self._target = tgt
                     self.ra_waypoint = tgt
                     self.clock = time.time()

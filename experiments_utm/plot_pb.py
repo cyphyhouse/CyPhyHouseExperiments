@@ -86,15 +86,20 @@ class Plotter:
 def plot_trajectories(fn_list):
     trajectory_list = []
     for fn in fn_list:   
+        tmp = []
         with open(fn, 'rb') as f:
-            tmp = pickle.load(f)
-            trajectory_list.append(tmp)    
+            while 1:
+                try:
+                    tmp.append(pickle.load(f))
+                except EOFError:
+                    break   
+        trajectory_list.append(tmp)
     plot = Plotter()
     plot.plot2d(trajectory_list)
 
 if __name__ == "__main__":
     fn_list = [
-        './trajectories/drone0',
-        './trajectories/drone1',
+        './trajectories/rotation_playback/drone0_pb_1',
+        './trajectories/rotation_playback/drone1_pb_1',
     ]
     plot_trajectories(fn_list)

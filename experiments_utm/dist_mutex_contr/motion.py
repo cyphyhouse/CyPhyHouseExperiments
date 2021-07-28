@@ -242,7 +242,7 @@ class MotionROSplane(MotionBase):
         return ret
     
 class MotionHectorQuad(MotionBase):
-    BLOAT_WIDTH = 0.01
+    BLOAT_WIDTH = 0.001
 
     class Status(Enum):
         STAYING = 0
@@ -305,15 +305,18 @@ class MotionHectorQuad(MotionBase):
 
         return status == GoalStatus.SUCCEEDED
 
-    def waypoints_to_plan(self, clk: float, way_points, default=False) -> List[StampedRect]:
+    def waypoints_to_plan(self, clk: float, way_points, default=True) -> List[StampedRect]:
         pos = self.position  # NOTE: self.position returns a copy, so the value won't be changed by other threads.
         if default:
             rect_list = self._bloat_path(pos, way_points)
             deadline = clk
             ret = []
-            for rect in rect_list:
+            for i,rect in enumerate(rect_list):
                 ret.append(StampedRect(deadline, rect, True))
-                deadline = deadline + 0.5 * float(euclidean(rect.maxes, rect.mins))
+                if i == 0:
+                    deadline = deadline + 0.2*float(euclidean(way_points[i], pos))
+                elif i != len(way_points):                    
+                    deadline = deadline + 0.2*float(euclidean(way_points[i], way_points[i-1]))
             return ret
         # else:
         flagged_waypoints = self._fixed_resolution(pos, way_points, resolution=2.5)
@@ -382,7 +385,8 @@ class MotionHectorQuad(MotionBase):
         prev_rect = cls._bloat_point(cur_pos)
         for p in way_points:
             curr_rect = cls._bloat_point(p)
-            ret.append(cls._bloat_segment(prev_rect, curr_rect))
+            # ret.append(cls._bloat_segment(prev_rect, curr_rect))
+            ret.append(prev_rect)
             prev_rect = curr_rect
         ret.append(prev_rect)  # Stay in the last rect
         return ret
