@@ -1,0 +1,122 @@
+allread:
+  Product prod0
+
+allwrite:
+  pos part_loc_on_belt  // w.r.t kitting arm
+  
+
+agent Conveyor
+  using ConveyorBelt:
+    actuators:
+      float control_power
+    sensors:
+      bool enabled
+      float power
+
+  using Proximity
+    sensors:
+      bool object_detected
+      // float min_range
+      // float max_range
+      pos part_loc // Calculate the location of the detected part given proximity
+
+  start:
+    pre: !ConveyorBelt.enabled
+    eff:
+      ConveyorBelt.enabled = true
+      ConveyorBelt.control_power = 10.0  // Some arbitray constant
+
+  stop:
+    pre: ConveyorBelt.enabled
+      ConveyorBelt.control_power = 0.0
+      ConveyorBelt.enabled = false
+
+  detected:
+    pre: ConveyorBelt.enabled && Proximity.object_detected
+    eff:
+      ConveyorBelt.control_power = 0.0  // Pause the conveyor belt
+      part_loc_on_belt = Proximity.part_loc
+
+
+agent Kitting
+  using Arm
+    actuators:
+      pos reach_pos
+    sensors:
+      bool reached
+
+  using Gripper
+    actuators:
+      bool enable_suction
+    sensors:
+      bool enabled
+      bool attached
+
+  local:
+    enum {IDLE, PICK, DROP} state = IDLE
+    Time timer = 0
+
+  detected:
+    pre: state == IDLE && part_loc_on_belt != None
+    eff:
+      Arm.reach_pos = part_loc_on_belt
+      state = PICK
+
+  pickup:
+    pre: state == PICK && Arm.reached
+    eff:
+      Gripper.enable_suction = true
+      timer = 0
+
+  transfer:
+    pre: state == PICK && Gripper.enabled && Gripper.attached
+    eff:
+      Arm.reach_pos = prod0.loc_on_tray  // Set target pos according to the product order
+      part_loc_on_belt = None
+      state = DROP
+
+  drop:
+    pre: state == DROP && Arm.reached
+    eff:
+      Gripper.enable_suction = false
+
+  reset:
+    pre: state == DROP && !Gripper.enabled && !Gripper.attached
+    eff:
+      state = IDLE
+
+  tick:
+    eff: timer++
+
+  pickup_timeout:
+    pre: state == PICK && Gripper.enabled && !Gripper.attached
+         && timer >= TIMEOUT
+    eff:
+      // TODO
+
+
+agent AGV1
+  using AGV:
+    actuators:
+      enum to_station
+    sensors:
+      str state
+      enum station
+  using Tray:
+    sensors:
+      pos part_loc_on_tray
+
+  goto_station:
+    pre: station != to_station
+
+      
+
+agent Gantry
+  using Arm
+
+  using Gripper
+    actuators:
+      bool enable_suction
+    sensors:
+      bool enabled
+      bool attached
