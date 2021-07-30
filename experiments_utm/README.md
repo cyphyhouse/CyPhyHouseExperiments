@@ -1,9 +1,11 @@
-UTM Formalization, Prototype, Verification, and Performance Evaluation
-======================================================================
+UTM Formalization, Prototype, Verification, and Performance Evaluation using SkyTrakx
+======================================================================================
 
 This directory contains all scripts for our exploration of using existing formal verification and simulation tools to
-verify and evaluate Unmanned Air-traffic Management (UTM) protocols.
-A preprint version of our research paper is available on arXiv at https://arxiv.org/abs/2009.04655
+verify and evaluate Unmanned Air-traffic Management (UTM) protocols using our toolkit, SkyTrakx.
+The research paper describing SkyTrakx is accepted by 24th IEEE International Conference on Intelligent Transportation (ITSC 2021).
+An extended preprint version of our research paper is available on arXiv at https://arxiv.org/abs/2009.04655
+
 
 The structure of this directory is as follows:
 
