@@ -1,0 +1,6 @@
+world_name: "city.world"
+
+
+devices:
+- {bot_name: "drone0", bot_type: "QUAD", init_pos: [0, 0, 40], init_yaw: 1.5707963267948966, init_lin_vel: [0, 3.5250120000000003, 0]}
+- {bot_name: "drone1", bot_type: "QUAD", init_pos:[0.0, -333.26832, 40], init_yaw: 1.5707963267948966, init_lin_vel: [4.199313874276274e-16, 6.858, 0]}

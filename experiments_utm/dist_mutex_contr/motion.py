@@ -13,17 +13,27 @@ from actionlib import GoalStatus, SimpleActionClient, SimpleGoalState
 from geometry_msgs.msg import Point, PoseStamped, Quaternion, Vector3
 from hector_uav_msgs.msg import LandingAction, LandingGoal, \
     PoseAction, PoseGoal, TakeoffAction, TakeoffGoal
+# from hector_uav_msgs import HeadingCommand, VelocityXYCommand
 from rosplane_msgs.msg import Waypoint
 import rospy
 import numpy as np
 from scipy.spatial import Rectangle
 from scipy.spatial.distance import euclidean
+from scipy.spatial.transform import Rotation
+
+from gazebo_msgs.msg import ModelState
+from gazebo_msgs.srv import SetModelState
+from geometry_msgs.msg import Pose, Point, Quaternion, Twist, Vector3
+
+import math as m
+
+AXES_SEQ = "ZYX" 
 
 from . import primitive_contracts
 
 MotionInitInfo = NamedTuple(
     "MotionInitInfo",
-    [("bot_name", str), ("bot_type", str), ("topic_prefix", str), ("position", tuple), ("yaw", float)]
+    [("bot_name", str), ("bot_type", str), ("topic_prefix", str), ("position", tuple), ("yaw", float), ("init_pose", Pose), ("init_twist", Twist)]
 )
 
 StampT = float
@@ -38,9 +48,20 @@ class MotionBase(abc.ABC):
         self._var_lock = RLock()
         self._device_init_info = device_init_info
         self._position = device_init_info.position  # type: Tuple[float, float, float]
-        self._orientation = (0.0, 0.0, 0.0, 1.0)  # TODO compute Quaternion from initial yaw
-        self._linear_velocity = (0,0,0)
-        self._angular_velocity = (0,0,0)
+        self._init_pose = device_init_info.init_pose
+        self._init_twist = device_init_info.init_twist
+        orientation = device_init_info.init_pose.orientation
+        self._orientation = (orientation.x, orientation.y, orientation.z, orientation.w) # (0.0, 0.0, 0.0, 1.0)  # TODO compute Quaternion from initial yaw
+        self._init_euler_angles = self.quaternion_to_euler(orientation.x, orientation.y, orientation.z, orientation.w)
+        self._init_phi =  self._init_euler_angles[0] # roll
+        self._init_theta = self._init_euler_angles[1] # pitch
+        self._init_psi = self._init_euler_angles[2] # yaw
+        linear = device_init_info.init_twist.linear 
+        angular = device_init_info.init_twist.angular 
+        self._linear_velocity = (linear.x, linear.y, linear.z) # (0,0,0)
+        self._init_linear_velocity = deepcopy(self._linear_velocity)
+        self._angular_velocity = (angular.x, angular.y, angular.z)
+        self._time_step = 0.01
 
     @abc.abstractmethod
     def register_ros_pub_sub(self) -> None:
@@ -122,6 +143,10 @@ class MotionBase(abc.ABC):
     @abc.abstractmethod
     def waypoints_to_plan(self, clk: float, way_points: List) -> List[StampedRect]:
         raise NotImplementedError
+    
+    def quaternion_to_euler(self, x, y, z, w):
+        yaw, pitch, roll = Rotation.from_quat([x, y, z, w]).as_euler(AXES_SEQ)
+        return [roll, pitch, yaw]
 
 
 def _load_reachtube_from_pickle(filename):
@@ -164,9 +189,9 @@ class MotionROSplane(MotionBase):
 
     def landing(self) -> None:
         rospy.logwarn("Landing for ROSplane is not supported yet.")
+    
 
     def send_target(self, point: Tuple[float, float, float]):
-      
         target_pose = Waypoint()
         shifted_ned = self._position_xyz_to_ned(np.array(point)) - self._init_ned
         target_pose.w = shifted_ned
@@ -183,6 +208,9 @@ class MotionROSplane(MotionBase):
         # NOTE Do not wait for result
         print("sending waypoints %s" % str(point))
         return self._pose_client.publish(target_pose)
+        
+
+       
 
     @classmethod
     def _extend_contract_from_reachtube(cls, plan: List[StampedRect], key: str, t_start: float = 0.0) -> float:
@@ -254,6 +282,8 @@ class MotionHectorQuad(MotionBase):
         self._takeoff_client = None
         self._landing_client = None
         self._pose_client = None
+        #self._velocityXY_client = None
+        #self._heading_client = None
 
     def register_ros_pub_sub(self) -> None:
         topic_prefix = self._device_init_info.topic_prefix
@@ -263,6 +293,13 @@ class MotionHectorQuad(MotionBase):
         self._landing_client = SimpleActionClient(landing_topic, LandingAction)
         pose_topic = rospy.resolve_name(topic_prefix + "/action/pose")
         self._pose_client = SimpleActionClient(pose_topic, PoseAction)
+        #velocityXY_topic = rospy.resolve_name(topic_prefix + "/action/velocityXY")
+        #self._velocityXY_client = SimpleActionClient(velocityXY_topic, VelocityXYCommand)
+        #heading_topic = rospy.resolve_name(topic_prefix + "/action/velocityXY")
+        #self._headineg_client = SimpleActionClient(heading_topic, HeadingCommand)
+        #rospy.init_node(topic_prefix + '_twist_control_node', anonymous=True)
+        # self._twist_client = rospy.Publisher(topic_prefix + "/cmd_vel", Twist, queue_size=10)
+        
 
     def takeoff(self, timeout: rospy.Duration = rospy.Duration()) -> bool:
         return self._send_action_and_wait(self._takeoff_client,
@@ -278,12 +315,149 @@ class MotionHectorQuad(MotionBase):
         target_pose.header.frame_id = "world"
         target_pose.pose.position = Point(*point)
         return target_pose
+    
+    '''    
+    def _control(self, desired, action):
+        
+        # Constants
+        Kp, Kp_bar, Kd = 0.9, 0.1, 0.1
+
+        # Variables
+        # (x, y, z, vx, vy, vz, phi, theta, psi) = self._state[:9]
+        x = self._position[0]
+        y = self._position[1]
+        z = self._position[2]
+        vx = self._linear_velocity[0]
+        vy = self._linear_velocity[1]
+        vz = self._linear_velocity[2]
+        euler_angles = self.quaternion_to_euler(self._orientation[0], self._orientation[1], self._orientation[2], self._orientation[3])
+        phi =  euler_angles[0] # roll
+        theta = euler_angles[1] # pitch
+        psi = euler_angles[2] # yaw
+        
+        (x_d, y_d, z_d, vx_d, vy_d, vz_d, phi_d, theta_d, psi_d,
+         ax_d, ay_d, az_d, dphi_d, dtheta_d, dpsi_d) = desired
+
+        # Derivative of state
+        (_, _, _, _, _, _, dphi, dtheta, dpsi) = self._dynamics(self._state[:9], 1.0, action)
+
+        # Feedforward control
+        f_ff = -self._mass * m.sqrt(ax_d ** 2 + ay_d ** 2 + (az_d - self.G) ** 2)
+        w1_ff = dphi_d - m.sin(theta_d) * dpsi_d
+        w2_ff = m.cos(phi_d) * dtheta_d + m.sin(phi_d) * m.cos(theta_d) * dpsi_d
+        w3_ff = -m.sin(phi_d) * dtheta_d + m.cos(phi_d) * m.cos(theta_d) * dpsi_d
+
+        # Feedback control
+        f_fbx = ((m.cos(phi) * m.sin(theta) * m.cos(psi) + m.sin(phi) * m.sin(psi)) *
+                 ((x_d - x) * Kp + (vx_d - vx) * Kd))
+        f_fby = ((m.cos(phi) * m.sin(theta) * m.sin(psi) - m.sin(phi) * m.cos(psi)) *
+                 ((y_d - y) * Kp + (vy_d - vy) * Kd))
+        f_fbz = m.cos(phi) * m.cos(theta) * ((z_d - z) * Kp + (vz_d - vz) * Kd)
+        f_fb = f_fbx + f_fby + f_fbz
+
+        w1_fb = Kp * (phi_d - phi) + Kd * (dphi_d - dphi) + Kp_bar * (y_d - y)
+        w2_fb = Kp * (theta_d - theta) + Kd * (dtheta_d - dtheta) + Kp_bar * (x_d - x)
+        w3_fb = Kp * (psi_d - psi) + Kd * (dpsi_d - dpsi)
+
+        return [f_ff + f_fb, w1_ff + w1_fb, w2_ff + w2_fb, w3_ff + w3_fb]
+    
+        
+    
+
+    @staticmethod
+    def _compute_angle(psi, vec):
+        unit = np.array([1.0, 0.0])
+        c, s = m.cos(psi), m.sin(psi)
+        R = np.array(((c, -s), (s, c)))
+
+        heading = np.matmul(R, unit)
+        diff = np.arctan2(np.linalg.det([heading, vec]), np.dot(heading, vec)) 
+        return psi + diff
+
+
+    def _compute_desired_state(self, goal):
+    
+        # State variables (x, y, z, vx, vy, vz, phi, theta, psi) = self._state[:9]
+        
+        x = self._position[0]
+        y = self._position[1]
+        z = self._position[2]
+        vx = self._linear_velocity[0]
+        vy = self._linear_velocity[1]
+        vz = self._linear_velocity[2]
+        euler_angles = self.quaternion_to_euler(self._orientation[0], self._orientation[1], self._orientation[2], self._orientation[3])
+        phi =  euler_angles[0] # roll
+        theta = euler_angles[1] # pitch
+        psi = euler_angles[2] # yaw
+        
+        # Compute distance and angle to goal
+        v2 = np.array([goal[0] - x, goal[1] - y])
+        dist = np.linalg.norm(v2)
+        angle = self._compute_angle(psi, v2)
+
+        # Compute desired state
+        if np.linalg.norm(v2) >= 1:
+            con = v2 / dist
+        else:
+            con = v2
+            
+        delta = 0.2
+
+        x_d = (delta * self._init_linear_velocity[0] + (1- delta) * con[0]) * self._time_step + x # con[0]
+        y_d = (delta * self._init_linear_velocity[1] + (1- delta) * con[1]) * self._time_step + y # con[1] 
+        z_d = (delta * self._init_linear_velocity[2] + (1- delta) * (goal[2] - z)) * self._time_step + z # (goal[2] - z)
+
+        vx_d =  (delta * self._init_linear_velocity[0] + (1- delta) * con[0] / self._time_step) # 
+        vy_d =  (delta * self._init_linear_velocity[1] + (1- delta) * con[1] / self._time_step) # 
+        vz_d =  (delta * self._init_linear_velocity[2] + (1- delta) * (goal[2] - z) / self._time_step) #
+
+        ax_d = (vx_d - vx)
+        ay_d = (vy_d - vy)
+        az_d = vz_d - vz
+
+        psi_d = (delta * self._init_psi + (1- delta) * (m.pi / 2 - angle))
+        beta_a = -ax_d * m.cos(psi_d) - ay_d * m.sin(psi_d)
+        beta_b = -az_d + 9.81
+        beta_c = -ax_d * m.sin(psi_d) + ay_d * m.cos(psi_d)
+        theta_d = m.atan2(beta_a, beta_b) + self._init_theta
+        phi_d = m.atan2(beta_c, m.sqrt(beta_a ** 2 + beta_b ** 2)) + self._init_phi
+
+        dphi_d = (phi_d -phi) / self._time_step
+        dtheta_d = (theta_d - theta) / self._time_step
+        dpsi_d = (psi_d - psi) / self._time_step
+        
+        desired = [x_d, y_d, z_d, vx_d, vy_d, vz_d, phi_d, theta_d, psi_d, ax_d, ay_d, az_d, dphi_d, dtheta_d, dpsi_d]
+        return desired
+    ''' 
+
 
     def send_target(self, point: Tuple[float, float, float]):
         self._pose_client.wait_for_server()
         pose_goal = PoseGoal(target_pose=self._to_pose_stamped(point))
         # NOTE Do not wait for result
         return self._pose_client.send_goal(pose_goal)
+        
+    def send_target_twist(self, point: Tuple[float, float, float]):
+        return point
+        '''
+        dist_vec = np.array([point[0] - self._position[0], point[1] - self._position[1], point[2] - self._position[2]])
+        dist_norm = np.linalg.norm(dist_vec)
+        vel_norm = np.linalg.norm([self._init_linear_velocity[0], self._init_linear_velocity[1], self._init_linear_velocity[2]])
+        time_to_reach =  dist_norm / vel_norm
+        steps_to_reach = time_to_reach / self._time_step
+        rate = rospy.Rate(100)
+        while abs(self._position[0] - point[0]) > 2 or abs(self._position[1] - point[1]) > 2: # for i in range(m.floor(steps_to_reach)):
+            desired_state = self._compute_desired_state(point)
+            lin = Vector3(x=desired_state[3], y=desired_state[4], z=desired_state[5])  # linear velocity
+            ang = Vector3(x=desired_state[-1], y=0.0, z=0.0)  # angular velocity
+            target_twist = Twist(linear=lin, angular=ang)
+            self._twist_client.publish(target_twist)
+            print("publishing twist, linear:" + str(target_twist.linear) + ", angular:" + str(target_twist.angular))
+            rate.sleep()
+        '''
+        
+        # print("publishing twist, linear:" + str(target_twist.linear) + ", angular:" + str(target_twist.angular))
+        # return self._twist_client.publish(target_twist)
 
     @staticmethod
     def _send_action_and_wait(action_client: SimpleActionClient,

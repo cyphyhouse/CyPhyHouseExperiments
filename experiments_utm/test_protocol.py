@@ -13,7 +13,17 @@ import eceb_scenarios
 import city_scenarios
 import ACAS_scenarios
 
+from scipy.spatial.transform import Rotation
+
+from gazebo_msgs.msg import ModelState
+from gazebo_msgs.srv import SetModelState
+from geometry_msgs.msg import Pose, Point, Quaternion, Twist, Vector3
+
 import rospy
+
+
+AXES_SEQ = "ZYX"  # Convention for Euler angles. Follow REP-103
+GZ_SET_MODEL_STATE = "/gazebo/set_model_state"
 
 def _multicast(mgr_queue_pair, agent_queue_list: List[Tuple[Queue, Queue]]) -> Sequence[bytes]:
     act_list = []
@@ -94,6 +104,7 @@ def test_protocol(scenario: Dict[str, Tuple[MotionInitInfo, List]]) -> None:
 
         print("========== Recorded Actions =========")
         # TODO More detailed statistics
+        print("act_list: ", act_list)
         print("Total actions: %d, Requests: %d, Replies: %d, Releases: %d" %
               (len(act_list),
                sum(act[0] == "request" for act in act_list),
@@ -108,6 +119,13 @@ def __build_argparser() -> argparse.ArgumentParser:
     parser.add_argument('scene', type=argparse.FileType('r'),
                         help="Yaml file of the scene with vehicle types and positions")
     return parser
+    
+
+
+
+def euler_to_quat(yaw, pitch=0.0, roll=0.0) -> Quaternion:
+    quat = Rotation.from_euler(AXES_SEQ, (yaw, pitch, roll)).as_quat()
+    return Quaternion(*quat)
 
 
 def __process_scene_yaml(fd) -> Dict[str, Dict[str, MotionInitInfo]]:
@@ -120,14 +138,37 @@ def __process_scene_yaml(fd) -> Dict[str, Dict[str, MotionInitInfo]]:
         cfg_devices = cfg['devices']
     else:
         raise ValueError("Unexpected value in YAML file")
+    
+    pose = {}
+    twist = {}
+    for dev in cfg_devices:
+    	init_pos = tuple(dev["init_pos"])
+    	init_yaw=dev.get("init_yaw", 0.0)
+    	init_lin_vel = tuple(dev.get("init_lin_vel", [0.0, 0.0, 0.0]))
+    	pos = Point(x=init_pos[0], y=init_pos[1], z=init_pos[2])
+    	quat = euler_to_quat(yaw=init_yaw, pitch=0.0, roll=0.0)
+    	pose[dev["bot_name"]] = Pose(position=pos, orientation=quat)
+
+    	lin = Vector3(x=init_lin_vel[0], y=init_lin_vel[1], z=init_lin_vel[2])  # linear velocity
+    	ang = Vector3(x=0.0, y=0.0, z=0.0)  # angular velocity
+    	twist[dev["bot_name"]] = Twist(linear=lin, angular=ang)
+
+    	#set_model_pose(dev["bot_name"], pose, twist)
+    
+    print("Done initializing states")
 
     return world_name, {dev["bot_name"]: MotionInitInfo(
                 bot_name=dev["bot_name"],
                 bot_type=dev["bot_type"],
                 position=tuple(dev["init_pos"]),
                 yaw=dev.get("init_yaw", 0.0),
+                init_pose = pose[dev["bot_name"]],
+                init_twist = twist[dev["bot_name"]],
                 topic_prefix=dev["bot_name"]
             ) for dev in cfg_devices}
+
+
+
 
 
 def main(argv=None):
@@ -152,7 +193,7 @@ def main(argv=None):
         #     'plane1',
         # }
 
-        selected_scenario = ACAS_scenarios.ACAS_01_9
+        selected_scenario = ACAS_scenarios.ACAS_01_PLANE # ACAS_grid_1_no_scaling #ACAS_01 #
         selected_agents = {
             'drone0',
             'drone1',
@@ -176,6 +217,7 @@ def main(argv=None):
     sc = {key: (device_info_map[key], wps) for key, wps in selected_scenario.items() if key in selected_agents}
     print(datetime.datetime.now().replace(microsecond=0).isoformat(), ':')
     test_protocol(sc)
+    
 
 
 if __name__ == "__main__":

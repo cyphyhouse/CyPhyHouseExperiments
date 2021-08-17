@@ -3,7 +3,7 @@ from typing import List, Tuple
 import matplotlib.pyplot as plt
 import copy
 import mpl_toolkits.mplot3d as a3
-import pypoman as ppm
+#import pypoman as ppm
 import numpy as np
 
 class Plotter:
@@ -29,37 +29,55 @@ class Plotter:
         # pdb.set_trace()
         plt.figure(0)
         plt.figure(1)
+        z0 = []
+        z1 = []
+        z_normal0 = []
+        z_normal1 = []
+        z_acas0 = []
+        z_acas1 = []
         for idx, trajectory in enumerate(trajectory_list):
             x = []
             y = []
-            z = []
+            # z = []
             x_normal = []
             y_normal = []
-            z_normal = []
+            # z_normal = []
             x_acas = []
             y_acas = []
-            z_acas = []
+            # z_acas = []
             trajectory = trajectory[:2000000]
             for point in trajectory:
                 x.append(point[1])
                 y.append(point[2])
-                z.append(point[3])
+                if idx%2:
+                	z0.append(point[3])
+                else:
+                	z1.append(point[3])
                 # print(point[4])
                 if point[5] == 1:
                     x_acas.append(point[1])
                     y_acas.append(point[2])
-                    z_acas.append(point[3])
+                    if idx%2:
+                    	z_acas0.append(point[3])
+                    else:
+                    	z_acas1.append(point[3])
                 else:
                     x_normal.append(point[1])
                     y_normal.append(point[2])
-                    z_normal.append(point[3])  
-                    z_acas.append(float('NAN'))
+                    if idx%2:
+                    	z_normal0.append(point[3])  
+                    	z_acas0.append(float('NAN'))
+                    else:
+                    	z_normal1.append(point[3])  
+                    	z_acas1.append(float('NAN'))
             plt.figure(0)
             plt.plot(x,y,Plotter.colors[idx%2])
             plt.plot(x_acas, y_acas, 'r.')
             plt.figure(1)
-            plt.plot(z,Plotter.colors[idx%2])
-            plt.plot(z_acas, 'r.')
+            plt.plot(z0,Plotter.colors[1])
+            plt.plot(z_acas0, 'r.')
+            plt.plot(z1,Plotter.colors[0])
+            plt.plot(z_acas1, 'r.')
 
         plt.show()
 
@@ -86,12 +104,12 @@ class Plotter:
 
 def plot_trajectories(fn_list):
     trajectory_list = []
-    for i in range(10):
-        for fn in fn_list:
-            fn = fn + f"_{i}"   
-            with open(fn, 'rb') as f:
-                tmp = pickle.load(f)
-                trajectory_list.append(tmp)    
+    #for i in range(10):
+    for fn in fn_list:
+        #fn = fn + f"_{i}"   
+         with open(fn, 'rb') as f:
+             tmp = pickle.load(f)
+             trajectory_list.append(tmp)    
     plot = Plotter()
     plot.plot2d(trajectory_list)
     # plot.plot3d(trajectory_list)
@@ -100,7 +118,11 @@ if __name__ == "__main__":
     fn_list = [
         # './trajectories/trajectories_acas06/drone0',
         # './trajectories/trajectories_acas06/drone1',
-        './trajectories/rotation_simulations/drone0',
-        './trajectories/rotation_simulations/drone1',
+        './trajectories/drone0_0_a',
+        './trajectories/drone1_0_a',
+        './trajectories/drone0_0_b',
+        './trajectories/drone1_0_b',
+        './trajectories/drone0_0_c',
+        './trajectories/drone1_0_c',
     ]
     plot_trajectories(fn_list)

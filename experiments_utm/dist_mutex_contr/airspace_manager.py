@@ -52,8 +52,8 @@ class AirspaceManager(AutomatonBase):
 
     def _eff_request(self, uid: Hashable, target: Contract) -> None:
         self._reply_set.add(uid)
-        if all(self._disjoint_query(target, v) for k, v in self._contr_dict.items() if k != uid):
-            self._contr_dict[uid] |= target
+        #if all(self._disjoint_query(target, v) for k, v in self._contr_dict.items() if k != uid):
+        self._contr_dict[uid] |= target
 
     def _eff_reply(self, uid: Hashable, acquired: Contract) -> None:
         self._reply_set.remove(uid)

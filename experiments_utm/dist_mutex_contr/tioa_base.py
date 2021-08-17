@@ -132,6 +132,8 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
                 
             def update_twist(data: TwistStamped):
                 # print("!!!!!!!!!!", data)
+                aut.motion.linear_velocity = (data.twist.linear.x, data.twist.linear.y, data.twist.linear.z)
+                aut.motion.angular_velocity = data.twist.angular
                 aut._linear_velocity = (data.twist.linear.x, data.twist.linear.y, data.twist.linear.z)
                 aut._angular_velocity = data.twist.angular
                 # print(f"{aut.uid}, !!!!!!!!!!", aut._linear_velocity)
