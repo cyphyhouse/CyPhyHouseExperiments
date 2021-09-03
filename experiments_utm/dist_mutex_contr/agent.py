@@ -14,6 +14,8 @@ from .tioa_base import Action, AutomatonBase
 from gazebo_msgs.msg import ModelState
 from gazebo_msgs.srv import SetModelState
 from geometry_msgs.msg import Pose, Point, Quaternion, Twist, Vector3
+from control_msgs.msg import PidState
+from hector_uav_msgs.msg import VehicleState
 
 from scipy.spatial.transform import Rotation
 
@@ -51,10 +53,10 @@ class Agent(AutomatonBase):
         TURN_RIGHT = 2
         TURN_LEFT = 3
 
-    def __init__(self, uid: Hashable, motion: MotionBase, waypoints: List):
+    def __init__(self, uid: Hashable, idx, motion: MotionBase, waypoints: List):
         super(Agent, self).__init__()
 
-        self.id = id
+        self.id = idx
         self.__uid = uid  # Set it as private to avoid being modified
         self.__motion = motion
         self.__way_points = deepcopy(waypoints)
@@ -73,11 +75,21 @@ class Agent(AutomatonBase):
         # self.__motion.position may be modified by ROS subscribers concurrently
         # so we need self._position to stay the same during a transition
         self._position = self.__motion.position
-        self._orientation = self.__motion.orientation
+        self._orientation = self.__motion.orientation #(0,0,0)
         self._linear_velocity = self.__motion._linear_velocity #(0,0,0)
         self._angular_velocity = self.__motion._angular_velocity # (0,0,0)
         self.__init_pose = deepcopy(motion._init_pose)
         self.__init_twist = deepcopy(motion._init_twist)
+        self._desired_velocity = (0,0,0)
+        self._vehicle_state = VehicleState()
+        self._vehicle_state.pose.orientation.w = 1
+
+        self._altitude_control_roll = 0
+        self._altitude_control_pitch = 0
+        self._altitude_control_yawrate = 0
+        self._velocity_control_x = 0
+        self._velocity_control_y = 0
+        self._velocity_control_z = 0
 
         self.record_linear_v = self.__motion._linear_velocity # (0,0,0)
         
@@ -128,7 +140,7 @@ class Agent(AutomatonBase):
     def __acas_ra_handler(self, data):
         raw_ra_string = data.data
         # self.received_ra_list.append((time.time(), raw_ra_string))
-        fn = f'./trajectories/{self.uid}_agent_acas_received'
+        fn = f'./trajectories/{self.uid}_{self.id}_agent_acas_received'
         with open(fn, "ab+") as f:
             pickle.dump((time.time(), raw_ra_string), f)
         # print(raw_ra_string)
@@ -173,13 +185,53 @@ class Agent(AutomatonBase):
             
         tmp_str = f"{self.uid}, {tmp_str_v}, {tmp_str_h}"
         curr_orientation = self._orientation
-        if self._status == Agent.Status.ACAS:
-            self.trajectory.append([time.time(), self._position[0], self._position[1], self._position[2], tmp_str, 1, self.quaternion_to_euler(curr_orientation[0], curr_orientation[1], curr_orientation[2], curr_orientation[3])[2], self._linear_velocity[0], self._linear_velocity[1], self._linear_velocity[2]])
+
+        state = self._vehicle_state
+        roll, pitch, yaw = self.quaternion_to_euler(
+            state.pose.orientation.x, 
+            state.pose.orientation.y, 
+            state.pose.orientation.z, 
+            state.pose.orientation.w
+        )
+        x = state.pose.position.x
+        y = state.pose.position.y
+        z = state.pose.position.z
+        vx = state.twist.linear.x
+        vy = state.twist.linear.y
+        vz = state.twist.linear.z
+        vangularx = state.twist.angular.x
+        vangulary = state.twist.angular.y
+        vangularz = state.twist.angular.z
+        vdesiredx = state.desired_velocity.x
+        vdesiredy = state.desired_velocity.y
+        vdesiredz = state.desired_velocity.z
+        if self._status == Agent.Status.ACAS:            
+            self.trajectory.append([
+                time.time(), x, y, z, 
+                tmp_str, 0, 
+                roll, pitch, yaw, 
+                vx, vy, vz, 
+                vangularx, vangulary, vangularz,
+                self._altitude_control_roll, self._altitude_control_pitch, self._altitude_control_yawrate,
+                self._velocity_control_x, self._velocity_control_y, self._velocity_control_z,
+                vdesiredx, vdesiredy, vdesiredz
+            ])
+            # self.trajectory.append([time.time(), self._position[0], self._position[1], self._position[2], tmp_str, 1, self.quaternion_to_euler(curr_orientation[0], curr_orientation[1], curr_orientation[2], curr_orientation[3])[2], self._linear_velocity[0], self._linear_velocity[1], self._linear_velocity[2]])
         else:
-            self.trajectory.append([time.time(), self._position[0], self._position[1], self._position[2], tmp_str, 0, self.quaternion_to_euler(curr_orientation[0], curr_orientation[1], curr_orientation[2], curr_orientation[3])[2], self._linear_velocity[0], self._linear_velocity[1], self._linear_velocity[2]])
+            self.trajectory.append([
+                time.time(), x, y, z, 
+                tmp_str, 1, 
+                roll, pitch, yaw, 
+                vx, vy, vz, 
+                vangularx, vangulary, vangularz,
+                self._altitude_control_roll, self._altitude_control_pitch, self._altitude_control_yawrate,
+                self._velocity_control_x, self._velocity_control_y, self._velocity_control_z,
+                vdesiredx, vdesiredy, vdesiredz
+            ])
+            # self.trajectory.append([time.time(), self._position[0], self._position[1], self._position[2], tmp_str, 0, self.quaternion_to_euler(curr_orientation[0], curr_orientation[1], curr_orientation[2], curr_orientation[3])[2], self._linear_velocity[0], self._linear_velocity[1], self._linear_velocity[2]])
 
     def dump_trajectory(self):
-        fn = f'./trajectories/{self.uid}'
+        fn = f'./trajectories/{self.uid}_{self.id}'
         with open(fn,'wb+') as f:
             pickle.dump(self.trajectory, f)
         # fn = f'./trajectories/{self.uid}_agent_acas_received'
@@ -290,17 +342,17 @@ class Agent(AutomatonBase):
     def quaternion_to_euler(self, x, y, z, w):
         yaw, pitch, roll = Rotation.from_quat([x, y, z, w]).as_euler(AXES_SEQ)
         return [roll, pitch, yaw]
-        t0 = +2.0 * (w * x + y * z)
-        t1 = +1.0 - 2.0 * (x * x + y * y)
-        roll = np.arctan2(t0, t1)
-        t2 = +2.0 * (w * y - z * x)
-        t2 = +1.0 if t2 > +1.0 else t2
-        t2 = -1.0 if t2 < -1.0 else t2
-        pitch = np.arcsin(t2)
-        t3 = +2.0 * (w * z + x * y)
-        t4 = +1.0 - 2.0 * (y * y + z * z)
-        yaw = np.arctan2(t3, t4)
-        return [roll, pitch, yaw]
+        # t0 = +2.0 * (w * x + y * z)
+        # t1 = +1.0 - 2.0 * (x * x + y * y)
+        # roll = np.arctan2(t0, t1)
+        # t2 = +2.0 * (w * y - z * x)
+        # t2 = +1.0 if t2 > +1.0 else t2
+        # t2 = -1.0 if t2 < -1.0 else t2
+        # pitch = np.arcsin(t2)
+        # t3 = +2.0 * (w * z + x * y)
+        # t4 = +1.0 - 2.0 * (y * y + z * z)
+        # yaw = np.arctan2(t3, t4)
+        # return [roll, pitch, yaw]
 
     def _eff_acas(self) -> None:
         if self.__motion._device_init_info.bot_type == 'PLANE':
@@ -379,7 +431,7 @@ class Agent(AutomatonBase):
                     tmp_str = f"{self.uid}, {tmp_str_v}, {tmp_str_h}"
                     print(tmp_str)
                     # self.handled_ra_list.append((time.time(), tmp_str))
-                    fn = f'./trajectories/{self.uid}_agent_acas_handled'
+                    fn = f'./trajectories/{self.uid}_{self.id}_agent_acas_handled'
                     with open(fn, 'ab+') as f:
                         pickle.dump((time.time(), tmp_str), f)
                     print("handling RA for plane 3")
@@ -450,7 +502,7 @@ class Agent(AutomatonBase):
                     tmp_str = f"{self.uid}, {tmp_str_v}, {tmp_str_h}"
                     print(tmp_str)
                     # self.handled_ra_list.append((time.time(), tmp_str))
-                    fn = f'./trajectories/{self.uid}_agent_acas_handled'
+                    fn = f'./trajectories/{self.uid}_{self.id}_agent_acas_handled'
                     with open(fn, 'ab+') as f:
                         pickle.dump((time.time(), tmp_str), f)
     
@@ -687,6 +739,7 @@ class Agent(AutomatonBase):
     def _update_continuous_vars(self) -> None:
         super(Agent, self)._update_continuous_vars()
         self._position = self.__motion.position
+        self._orientation = self.__motion.orientation
 
     @staticmethod
     def __plan_to_contr(plan: List[StampedRect]) -> Contract:

@@ -5,7 +5,10 @@ from queue import Empty
 from typing import Any, Dict, List, Optional, Tuple
 
 # TODO avoid importing rospy if not using ROS
-from geometry_msgs.msg import PoseStamped, TwistStamped
+from geometry_msgs.msg import PoseStamped, TwistStamped, Vector3
+from control_msgs.msg import PidState
+from hector_uav_msgs.msg import VehicleState
+
 from reachtube import Contract
 from rosgraph_msgs.msg import Clock
 import rospy
@@ -126,10 +129,30 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
             pose_topic_name = "/vrpn_client_node/%s/pose" % str(aut.uid)
             twist_topic_name = "/vrpn_client_node/%s/twist" % str(aut.uid)
 
+            altitude_control_roll_topic_name = f'/{aut.uid}/controller/attitude/roll/state'
+            altitude_control_pitch_topic_name = f'/{aut.uid}/controller/attitude/pitch/state'
+            altitude_control_yawrate_topic_name = f'/{aut.uid}/controller/attitude/yawrate/state'
+
+            velocity_control_x_topic_name = f'/{aut.uid}/controller/velocity/x/state'
+            velocity_control_y_topic_name = f'/{aut.uid}/controller/velocity/y/state'
+            velocity_control_z_topic_name = f'/{aut.uid}/controller/velocity/z/state'
+
+            desired_velocity_topic_name = f'/{aut.uid}/command/desired_vel'
+
+            vehicle_state_topic_name = f'/{aut.uid}/vehicle_state_desired_vel'
+
+            def update_vehicle_state(data: VehicleState):
+                aut._vehicle_state = data
+
+            def update_desired_velocity(data: Vector3):
+                # print(data)
+                aut._desired_velocity = (data.x, data.y, data.z)
+
             def update_pose(data: PoseStamped):
                 aut.motion.position = data.pose.position
-                aut.motion.orientation = data.pose.orientation
-                
+                aut.motion.orientation = data.pose.orientation                
+                # aut._orientation = (data.pose.orientation.x, data.pose.orientation.y, data.pose.orientation.z, data.pose.orientation.w)
+
             def update_twist(data: TwistStamped):
                 # print("!!!!!!!!!!", data)
                 aut.motion.linear_velocity = (data.twist.linear.x, data.twist.linear.y, data.twist.linear.z)
@@ -138,9 +161,37 @@ def run_as_process(aut: AutomatonBase, i_queue: Queue, o_queue: Queue,
                 aut._angular_velocity = data.twist.angular
                 # print(f"{aut.uid}, !!!!!!!!!!", aut._linear_velocity)
 
+            def update_altitude_control_roll(data: PidState):
+                aut._altitude_control_roll = data.output
+
+            def update_altitude_control_pitch(data: PidState):
+                aut._altitude_control_pitch = data.output
+
+            def update_altitude_control_yawrate(data: PidState):
+                aut._altitude_control_yawrate = data.output
+
+            def update_velocity_control_x(data: PidState):
+                aut._velocity_control_x = data.output
+
+            def update_velocity_control_y(data: PidState):
+                aut._velocity_control_y = data.output
+
+            def update_velocity_control_z(data: PidState):
+                aut._velocity_control_z = data.output
+
             # NOTE This creates a thread in this process
             rospy.Subscriber(pose_topic_name, PoseStamped, update_pose, queue_size=10)
             rospy.Subscriber(twist_topic_name, TwistStamped, update_twist, queue_size=10)
+
+            rospy.Subscriber(altitude_control_pitch_topic_name, PidState, update_altitude_control_pitch, queue_size=10)
+            rospy.Subscriber(altitude_control_roll_topic_name, PidState, update_altitude_control_roll, queue_size=10)
+            rospy.Subscriber(altitude_control_yawrate_topic_name, PidState, update_altitude_control_yawrate, queue_size=10)
+            rospy.Subscriber(velocity_control_x_topic_name, PidState, update_velocity_control_x, queue_size=10)
+            rospy.Subscriber(velocity_control_y_topic_name, PidState, update_velocity_control_y, queue_size=10)
+            rospy.Subscriber(velocity_control_z_topic_name, PidState, update_velocity_control_z, queue_size=10)
+            
+            rospy.Subscriber(desired_velocity_topic_name, Vector3, update_desired_velocity, queue_size=10)
+            rospy.Subscriber(vehicle_state_topic_name, VehicleState, update_vehicle_state, queue_size=10)
 
             rospy.logdebug("%s: waiting for the first position message" % repr(aut))
             rospy.wait_for_message(pose_topic_name, PoseStamped)

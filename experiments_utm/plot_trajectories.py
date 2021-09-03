@@ -5,6 +5,7 @@ import copy
 import mpl_toolkits.mplot3d as a3
 #import pypoman as ppm
 import numpy as np
+import os
 
 class Plotter:
     colors = ['b', 'g']
@@ -30,6 +31,11 @@ class Plotter:
         plt.figure(0)
         plt.figure(1)
         for idx, trajectory in enumerate(trajectory_list):
+            point = trajectory[-1]
+            for ele in point:
+                if type(ele) == float:
+                    if np.isnan(ele):
+                        return
             t = []
             x = []
             y = []
@@ -42,78 +48,101 @@ class Plotter:
             x_normal = []
             y_normal = []
             z_normal = []
+            roll_normal = []
+            pitch_normal = []
             yaw_normal = []
             vx_normal = []
             vy_normal = []
             vz_normal = []
+            vangularx_normal = []
+            vangulary_normal = []
+            vangularz_normal = []
             t_acas = []
             x_acas = []
             y_acas = []
             z_acas = []
+            roll_acas = []
+            pitch_acas = []
             yaw_acas = []
             vx_acas = []
             vy_acas = []
             vz_acas = []
+            vangularx_acas = []
+            vangulary_acas = []
+            vangularz_acas = []
             trajectory = trajectory[:2000000] # trajectory[:2000000]
             for idx2, point in enumerate(trajectory):
-                t.append(idx2)
-                x.append(point[1])
-                y.append(point[2])
-                z.append(point[3])
-                yaw.append(point[6])
-                vx.append(point[7])
-                vy.append(point[8])
-                vz.append(point[9])
-                # print(point[4])
-                if point[5] == 1:
-                    t_acas.append(idx2)
-                    x_acas.append(point[1])
-                    y_acas.append(point[2])
-                    z_acas.append(point[3])
-                    yaw_acas.append(point[6])
-                    vx_acas.append(point[7])
-                    vy_acas.append(point[8])
-                    vz_acas.append(point[9])
-                else:
-                    t_normal.append(idx2)
-                    x_normal.append(point[1])
-                    y_normal.append(point[2])
-                    z_normal.append(point[3])  
-                    #z_acas.append(float('NAN'))
-                    yaw_normal.append(point[6])
-                    vx_normal.append(point[7])
-                    vy_normal.append(point[8])
-                    vz_normal.append(point[9])
+                if idx2%1000 == 0:
+                    t.append(idx2)
+                    x.append(point[1])
+                    y.append(point[2])
+                    z.append(point[3])
+                    yaw.append(point[6])
+                    vx.append(point[7])
+                    vy.append(point[8])
+                    vz.append(point[9])
+                    # print(point[4])
+                    if point[5] == 1:
+                        t_acas.append(idx2)
+                        x_acas.append(point[1])
+                        y_acas.append(point[2])
+                        z_acas.append(point[3])
+                        # yaw_acas.append(point[6])
+                        # yaw_acas.append(point[6])
+                        roll_acas.append(point[6])
+                        pitch_acas.append(point[7])
+                        yaw_acas.append(point[8])
+                        vx_acas.append(point[9])
+                        vy_acas.append(point[10])
+                        vz_acas.append(point[11])
+                        vangularx_acas.append(point[12])
+                        vangulary_acas.append(point[13])
+                        vangularz_acas.append(point[14])
+                        
+                    else:
+                        t_normal.append(idx2)
+                        x_normal.append(point[1])
+                        y_normal.append(point[2])
+                        z_normal.append(point[3])  
+                        #z_acas.append(float('NAN'))
+                        roll_normal.append(point[6])
+                        pitch_normal.append(point[7])
+                        yaw_normal.append(point[8])
+                        vx_normal.append(point[9])
+                        vy_normal.append(point[10])
+                        vz_normal.append(point[11])
+                        vangularx_normal.append(point[12])
+                        vangulary_normal.append(point[13])
+                        vangularz_normal.append(point[14])
+                        
             print("Last state of drone", idx, "is : ", point)
             plt.figure(0)
             plt.plot(x,y,Plotter.colors[idx%2])
-            plt.plot(x_acas, y_acas, 'r.')
+            # plt.plot(x_acas, y_acas, 'r.')
             plt.figure(1)
             plt.plot(t, z,Plotter.colors[idx%2])
-            plt.plot(t_acas, z_acas, 'r.')
+            # plt.plot(t_acas, z_acas, 'r.')
             plt.figure(2)
             plt.plot(t, yaw,Plotter.colors[idx%2])
-            plt.plot(t_acas, yaw_acas, 'r.')
+            # plt.plot(t_acas, yaw_acas, 'r.')
             plt.figure(3)
             plt.plot(t, vx,Plotter.colors[idx%2])
-            plt.plot(t_acas, vx_acas, 'r.')
+            # plt.plot(t_acas, vx_acas, 'r.')
             plt.figure(4)
             plt.plot(t, vy,Plotter.colors[idx%2])
-            plt.plot(t_acas, vy_acas, 'r.')
+            # plt.plot(t_acas, vy_acas, 'r.')
             plt.figure(5)
             plt.plot(t, vz,Plotter.colors[idx%2])
-            plt.plot(t_acas, vz_acas, 'r.')
+            # plt.plot(t_acas, vz_acas, 'r.')
             plt.figure(6)
             plt.plot(t,x,Plotter.colors[idx%2])
-            plt.plot(t_acas, x_acas, 'r.')
+            # plt.plot(t_acas, x_acas, 'r.')
             plt.figure(7)
             plt.plot(t, y,Plotter.colors[idx%2])
-            plt.plot(t_acas, y_acas, 'r.')
-            print("x_acas: ", x_acas)
-            print("y_acas: ", y_acas)
-            print("z_acas: ", z_acas)
-
-        plt.show()
+            # plt.plot(t_acas, y_acas, 'r.')
+            # print("x_acas: ", x_acas)
+            # print("y_acas: ", y_acas)
+            # print("z_acas: ", z_acas)
 
     @staticmethod
     def plot3d(trajectory_list: List[List[Tuple[float, float, float]]]):
@@ -136,13 +165,23 @@ class Plotter:
         pass
 
 def plot_trajectories(fn_list):
-    trajectory_list = []
-    for fn in fn_list:   
-        with open(fn, 'rb') as f:
-            tmp = pickle.load(f)
-            trajectory_list.append(tmp)    
-    plot = Plotter()
-    plot.plot2d(trajectory_list)
+    for i in range(9):
+        for j in range(9):
+            for k in range(4):
+                scenario_idx = f"_{i}_{j}_{k}"
+                trajectory_list = []
+                print(scenario_idx)
+                for fn in fn_list:   
+                    fn_tmp = fn + scenario_idx
+                    if os.path.isfile(fn_tmp):
+                        with open(fn_tmp, 'rb') as f:
+                            tmp = pickle.load(f)
+                            trajectory_list.append(tmp)    
+                plot = Plotter()
+                plot.plot2d(trajectory_list)
+ 
+    plt.show()
+
 
 if __name__ == "__main__":
     fn_list = [

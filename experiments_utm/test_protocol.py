@@ -20,7 +20,9 @@ from gazebo_msgs.srv import SetModelState
 from geometry_msgs.msg import Pose, Point, Quaternion, Twist, Vector3
 
 import rospy
+import pickle
 
+import sys
 
 AXES_SEQ = "ZYX"  # Convention for Euler angles. Follow REP-103
 GZ_SET_MODEL_STATE = "/gazebo/set_model_state"
@@ -47,7 +49,7 @@ def _multicast(mgr_queue_pair, agent_queue_list: List[Tuple[Queue, Queue]]) -> S
     return act_list
 
 
-def test_protocol(scenario: Dict[str, Tuple[MotionInitInfo, List]]) -> None:
+def test_protocol(scenario: Dict[str, Tuple[MotionInitInfo, List]], idx:str = '') -> None:
     print(scenario)
     for uid, (init_info, wps) in scenario.items():
         print(uid)
@@ -61,7 +63,7 @@ def test_protocol(scenario: Dict[str, Tuple[MotionInitInfo, List]]) -> None:
                                    "o_queue": air_mgr_o_queue,
                                    "stop_ev": stop_ev})
 
-    agent_list = [Agent(uid, build_motion_controller(init_info), wps)
+    agent_list = [Agent(uid, idx, build_motion_controller(init_info), wps)
                   for uid, (init_info, wps) in scenario.items()]
     agent_proc_list = []  # type: List[Process]
     agent_queue_list = []  # type: List[Tuple[Queue, Queue]]
@@ -120,8 +122,14 @@ def __build_argparser() -> argparse.ArgumentParser:
                         help="Yaml file of the scene with vehicle types and positions")
     return parser
     
-
-
+def __build_different_argparser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Run UTM protocol with the given scene and scenarios"
+    )
+    parser.add_argument('scene', help="Yaml file of the scene with vehicle types and positions")
+    parser.add_argument('scene_info', help="Pickle file containing waypoints in the scene")
+    parser.add_argument('idx', help="Idx of the scene")
+    return parser
 
 def euler_to_quat(yaw, pitch=0.0, roll=0.0) -> Quaternion:
     quat = Rotation.from_euler(AXES_SEQ, (yaw, pitch, roll)).as_quat()
@@ -167,9 +175,30 @@ def __process_scene_yaml(fd) -> Dict[str, Dict[str, MotionInitInfo]]:
                 topic_prefix=dev["bot_name"]
             ) for dev in cfg_devices}
 
+def run_test_protocol(argv=None):
+    # parser = __build_different_argparser()
+    # if argv is None:
+    #     argx = parser.parse_args()
+    # else:
+    #     argv = parser.parse_args(argv)
+    scene = sys.argv[1]
+    scene_info_fn = sys.argv[2]
+    idx = sys.argv[3]
+    f = open(scene, 'r')
+    world_name, device_info_map = __process_scene_yaml(f)
+    
+    with open(scene_info_fn, 'rb') as f:
+        scene_info = pickle.load(f)
+    selected_scenario = scene_info[0]
+    selected_agents = scene_info[1]
+    
 
+    if not selected_agents.issubset(set(device_info_map.keys())):
+        raise ValueError("Not all selected agents are specified in %s" % scene)
 
-
+    sc = {key: (device_info_map[key], wps) for key, wps in selected_scenario.items() if key in selected_agents}
+    print(datetime.datetime.now().replace(microsecond=0).isoformat(), ':')
+    test_protocol(sc, idx)
 
 def main(argv=None):
     parser = __build_argparser()
@@ -193,7 +222,7 @@ def main(argv=None):
         #     'plane1',
         # }
 
-        selected_scenario = ACAS_scenarios.ACAS_01_PLANE # ACAS_grid_1_no_scaling #ACAS_01 #
+        selected_scenario = ACAS_scenarios.ACAS_01 # ACAS_grid_1_no_scaling #ACAS_01 #
         selected_agents = {
             'drone0',
             'drone1',
@@ -222,7 +251,8 @@ def main(argv=None):
 
 if __name__ == "__main__":
     try:
-        main()
+        # main()
+        run_test_protocol()
     except KeyboardInterrupt:
         print("KeyboardInterrupt.")
     finally:
