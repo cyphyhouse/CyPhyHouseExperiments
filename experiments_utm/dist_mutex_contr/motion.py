@@ -10,7 +10,7 @@ from threading import RLock
 from typing import Mapping, NamedTuple, Tuple, Type, Union, List
 
 from actionlib import GoalStatus, SimpleActionClient, SimpleGoalState
-from geometry_msgs.msg import Point, PoseStamped, Quaternion, Vector3
+from geometry_msgs.msg import Point, PoseStamped, Quaternion, Vector3, TwistStamped, Twist
 from hector_uav_msgs.msg import LandingAction, LandingGoal, \
     PoseAction, PoseGoal, TakeoffAction, TakeoffGoal
 # from hector_uav_msgs import HeadingCommand, VelocityXYCommand
@@ -293,6 +293,9 @@ class MotionHectorQuad(MotionBase):
         self._landing_client = SimpleActionClient(landing_topic, LandingAction)
         pose_topic = rospy.resolve_name(topic_prefix + "/action/pose")
         self._pose_client = SimpleActionClient(pose_topic, PoseAction)
+        
+        # pose_topic = rospy.resolve_name(topic_prefix + "/action/")
+        self._twist_limit_publisher = rospy.Publisher(topic_prefix+"/command/twist_limit",Twist,queue_size=1)
         #velocityXY_topic = rospy.resolve_name(topic_prefix + "/action/velocityXY")
         #self._velocityXY_client = SimpleActionClient(velocityXY_topic, VelocityXYCommand)
         #heading_topic = rospy.resolve_name(topic_prefix + "/action/velocityXY")
@@ -316,6 +319,14 @@ class MotionHectorQuad(MotionBase):
         target_pose.pose.position = Point(*point)
         return target_pose
     
+    @staticmethod
+    def _to_twist_stamped(point: Tuple[float, float, float]) -> Twist:
+        res = Twist()
+        res.linear.x = point[0]
+        res.linear.y = point[1]
+        res.linear.z = point[2]
+        return res
+
     '''    
     def _control(self, desired, action):
         
@@ -437,8 +448,10 @@ class MotionHectorQuad(MotionBase):
         # NOTE Do not wait for result
         return self._pose_client.send_goal(pose_goal)
         
-    def send_target_twist(self, point: Tuple[float, float, float]):
-        return point
+    def send_target_twist_limit(self, twist: Tuple[float, float, float]):
+        self._twist_limit_publisher.publish(self._to_twist_stamped(twist))
+        # return point
+        
         '''
         dist_vec = np.array([point[0] - self._position[0], point[1] - self._position[1], point[2] - self._position[2]])
         dist_norm = np.linalg.norm(dist_vec)

@@ -58,14 +58,15 @@ init_pos_1 = [-133.35894903682029, 0, 3]
 #transformed_dict[agent]=[]
 #   for point in points:
 #    transformed_dict[agent].append(transform_waypoint(point, ([0,0,0], rot_angle)))
-theta_list = [-np.pi*3/4, -np.pi/2, -np.pi*3/8, -np.pi/4, 0, np.pi/4, np.pi/3, np.pi*3/4, np.pi]
-# vint_list = [60, 150, 300, 450, 600, 750, 900, 1050, 1145]
-# rho_list = [10000, 43736, 87472, 120000]
+theta_list = [float('nan'), float('nan'), float('nan'), float('nan'), float('nan'), float('nan'), float('nan'), float('nan'), np.pi]
+vint_list = [60, 150, 300, 450, 600, 750, 900, 1050, 1145]
+rho_list = [10000, 43736, 87472, 120000]
 
-# theta_list = [np.pi/3]
-vint_list = [600, 750, 900, 1050]
-rho_list = [10000, 43736, 87472, ]
-
+theta_list = [np.pi/3]
+# vint_list = [600, 750, 900, 1050]
+# rho_list = [10000, 43736, 87472, ]
+vint_list = [900,]
+rho_list = [43736,]
 
 scale = 0.3048 / 40
 T = 100
@@ -75,10 +76,14 @@ n = 1
 for i, theta in enumerate(theta_list):
     for j, vint in enumerate(vint_list):
         for k, rho in enumerate(rho_list):
+            # for l, h in enumerate(h_list):
+            h = -1000
+            if np.isnan(theta) or np.isnan(vint) or np.isnan(rho):
+                continue
             print(f"Run simulation for configuration {theta}, {vint}, {rho}")
             yaml_fn = f'../scenes/looping/acas_{i}_{j}_{k}.yaml'
             wp_fn = f'../scenes/looping/acas_wp_{i}_{j}_{k}'
-            init_pos_0 = [0, 0, 40]
+            init_pos_0 = [0, 0, 60]
             init_yaw_0 = np.pi / 2
             # vint = vint*scale
 
@@ -98,7 +103,7 @@ for i, theta in enumerate(theta_list):
                 phi = 0
                 psi = 0
                 vown = (T*vint+rho)/T 
- 
+
             if np.isnan(phi) or np.isnan(psi) or np.isnan(vown):
                 print(f'Configuration {theta}, {vint}, {rho} is not available')
                 continue
@@ -106,9 +111,9 @@ for i, theta in enumerate(theta_list):
             yint = init_pos_0[1]+rho*np.sin(theta+np.pi/2)
 
             init_lin_vel_0 = [0, vown * scale, 0]
-            init_pos_1 = [xint * scale, yint * scale, 40]
+            init_pos_1 = [xint * scale, yint * scale, init_pos_0[2] - h*scale]
             init_yaw_1 = np.pi / 2 + phi
-            init_lin_vel_1 = [vint * np.cos(init_yaw_1) * scale, vint * np.sin(init_yaw_1) * scale, 0]
+            init_lin_vel_1 = [vint * np.cos(init_yaw_1) * scale, vint * np.sin(init_yaw_1) * scale, h*vint/rho*scale]
             yaml_str_0 = string_init_0 + str(init_pos_0) + ', init_yaw: ' + str(init_yaw_0) + ', init_lin_vel: ' + str(init_lin_vel_0) + '}\n'
             yaml_str_1 = string_init_1 + str(init_pos_1) + ', init_yaw: ' + str(init_yaw_1) + ', init_lin_vel: ' + str(init_lin_vel_1) + '}\n'
             print(yaml_str_0)
@@ -121,10 +126,10 @@ for i, theta in enumerate(theta_list):
             waypoints_dict = {}
             waypoints_dict['drone0'] =[]
             waypoints_dict['drone1'] =[]
-            for l in range(n):
-                waypoints_dict['drone0'].append((init_pos_0[0] + init_lin_vel_0[0] * (l+1) * T_wp, init_pos_0[1] + init_lin_vel_0[1] * (l+1) * T_wp, 40))
-                waypoints_dict['drone1'].append((init_pos_1[0] + init_lin_vel_1[0] * (l+1) * T_wp, init_pos_1[1] + init_lin_vel_1[1] * (l+1) * T_wp, 40))
-            waypoints_dict['drone1'].append((init_pos_1[0] + init_lin_vel_1[0] * (n+1) * T_wp, init_pos_1[1] + init_lin_vel_1[1] * (n+1) * T_wp, 40))
+            for m in range(n):
+                waypoints_dict['drone0'].append((init_pos_0[0] + init_lin_vel_0[0] * (m+1) * T_wp, init_pos_0[1] + init_lin_vel_0[1] * (m+1) * T_wp, init_pos_0[2]))
+                waypoints_dict['drone1'].append((init_pos_1[0] + init_lin_vel_1[0] * (m+1) * T_wp, init_pos_1[1] + init_lin_vel_1[1] * (m+1) * T_wp, init_pos_1[2] + init_lin_vel_1[2] * (m+1) * T_wp))
+            # waypoints_dict['drone1'].append((init_pos_1[0] + init_lin_vel_1[0] * (n+1) * T_wp, init_pos_1[1] + init_lin_vel_1[1] * (n+1) * T_wp, 60))
             waypoints_str = f"acas_grid_{i}_{j}_{k} = {waypoints_dict}"
             print(waypoints_str)
             with open(wp_fn, 'wb+') as f:

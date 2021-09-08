@@ -628,7 +628,8 @@ def load_parse_trajectory(test: Test):
 def generate_test_suite(
     theta_list = [-np.pi*3/4, -np.pi/2, -np.pi*3/8, -np.pi/4, 0, np.pi/4, np.pi/3, np.pi*3/4, np.pi], 
     vint_list = [60, 150, 300, 450, 600, 750, 900, 1050, 1145], 
-    rho_list = [10000, 43736, 87472, 120000]
+    rho_list = [10000, 43736, 87472, 120000],
+    h_list = [-2000, 0, 2000]
 ) -> List[Test]:
     # theta_list = [-np.pi*3/4, -np.pi/2, -np.pi*3/8, -np.pi/4, 0, np.pi/4, np.pi/3, np.pi*3/4, np.pi]
     # vint_list = [60, 150, 300, 450, 600, 750, 900, 1050, 1145]
@@ -645,59 +646,73 @@ def generate_test_suite(
 
     scale = 0.3048 / 40
     T = 100
-    T_wp = 120
+    T_wp = 150
     n = 1
 
     test_suite = []
     for i, theta in enumerate(theta_list):
         for j, vint in enumerate(vint_list):
             for k, rho in enumerate(rho_list):
-                print(f"Run simulation for configuration {theta}, {vint}, {rho}")
-                init_pos_0 = [0, 0, 40]
-                init_yaw_0 = np.pi / 2
+                for l, h in enumerate(h_list):
+                    print(f"Run simulation for configuration {theta}, {vint}, {rho}, {h}")
+                    init_pos_0 = [0, 0, 60]
+                    init_yaw_0 = np.pi / 2
 
-                if theta>0 and theta<np.pi:
-                    phi = -np.arcsin(rho*np.sin(abs(theta))/(T*vint))
-                    psi = np.pi-abs(theta)-abs(phi)
-                    vown = vint*np.sin(psi)/np.sin(abs(theta))
-                elif theta>-np.pi and theta<0:
-                    phi = np.arcsin(rho*np.sin(abs(theta))/(T*vint))
-                    psi = np.pi-abs(theta)-abs(phi)
-                    vown = vint*np.sin(psi)/np.sin(abs(theta))
-                elif theta==abs(np.pi):
-                    phi = 0
-                    psi = 0
-                    vown = (T*vint-rho)/T
-                else:
-                    phi = 0
-                    psi = 0
-                    vown = (T*vint+rho)/T 
-    
-                if np.isnan(phi) or np.isnan(psi) or np.isnan(vown):
-                    print(f'Configuration {theta}, {vint}, {rho} is not available')
-                    continue
-                xint = init_pos_0[0]+rho*np.cos(theta+np.pi/2)
-                yint = init_pos_0[1]+rho*np.sin(theta+np.pi/2)
+                    if theta>0 and theta<np.pi:
+                        phi = -np.arcsin(rho*np.sin(abs(theta))/(T*vint))
+                        psi = np.pi-abs(theta)-abs(phi)
+                        vown = vint*np.sin(psi)/np.sin(abs(theta))
+                    elif theta>-np.pi and theta<0:
+                        phi = np.arcsin(rho*np.sin(abs(theta))/(T*vint))
+                        psi = np.pi-abs(theta)-abs(phi)
+                        vown = vint*np.sin(psi)/np.sin(abs(theta))
+                    elif theta==abs(np.pi):
+                        phi = 0
+                        psi = 0
+                        vown = (T*vint-rho)/T
+                    else:
+                        phi = 0
+                        psi = 0
+                        vown = (T*vint+rho)/T 
+        
 
-                init_lin_vel_0 = [0, vown * scale, 0]
-                init_pos_1 = [xint * scale, yint * scale, 40]
-                init_yaw_1 = np.pi / 2 + phi
-                init_lin_vel_1 = [vint * np.cos(init_yaw_1) * scale, vint * np.sin(init_yaw_1) * scale, 0]
-                init_0 = init_pos_0 + [0,0,init_yaw_0] + init_lin_vel_0 + [0,0,0]
-                init_1 = init_pos_1 + [0,0,init_yaw_1] + init_lin_vel_1 + [0,0,0]
-                init = [init_0, init_1]
+                    if np.isnan(phi) or np.isnan(psi) or np.isnan(vown):
+                        print(f'Configuration {theta}, {vint}, {rho} is not available')
+                        continue
+                    xint = init_pos_0[0]+rho*np.cos(theta+np.pi/2)
+                    yint = init_pos_0[1]+rho*np.sin(theta+np.pi/2)
 
-                waypoints_dict = {}
-                waypoints_dict['drone0'] =[]
-                waypoints_dict['drone1'] =[]
-                for l in range(n):
-                    waypoints_dict['drone0'].append((init_pos_0[0] + init_lin_vel_0[0] * (l+1) * T_wp, init_pos_0[1] + init_lin_vel_0[1] * (l+1) * T_wp, 40))
-                    waypoints_dict['drone1'].append((init_pos_1[0] + init_lin_vel_1[0] * (l+1) * T_wp, init_pos_1[1] + init_lin_vel_1[1] * (l+1) * T_wp, 40))
-                waypoints_dict['drone1'].append((init_pos_1[0] + init_lin_vel_1[0] * (n+1) * T_wp, init_pos_1[1] + init_lin_vel_1[1] * (n+1) * T_wp, 40))
-                waypoints_list = [waypoints_dict['drone0'], waypoints_dict['drone1']]
-                test_case = Test(init=init, wp=waypoints_list, T=T_wp, idx=f"{i}_{j}_{k}", agent_list = ['drone0', 'drone1'])
+                    init_lin_vel_0 = [0, vown * scale, 0]
+                    init_pos_1 = [xint * scale, yint * scale, init_pos_0[2] - h*scale]
+                    init_yaw_1 = np.pi / 2 + phi
+                    init_lin_vel_1 = [vint * np.cos(init_yaw_1) * scale, vint * np.sin(init_yaw_1) * scale, h*vint/rho*scale]
+                
 
-                test_suite.append(test_case)
+                    # if np.isnan(phi) or np.isnan(psi) or np.isnan(vown):
+                    #     print(f'Configuration {theta}, {vint}, {rho} is not available')
+                    #     continue
+                    # xint = init_pos_0[0]+rho*np.cos(theta+np.pi/2)
+                    # yint = init_pos_0[1]+rho*np.sin(theta+np.pi/2)
+
+                    # init_lin_vel_0 = [0, vown * scale, 0]
+                    # init_pos_1 = [xint * scale, yint * scale, 40]
+                    # init_yaw_1 = np.pi / 2 + phi
+                    # init_lin_vel_1 = [vint * np.cos(init_yaw_1) * scale, vint * np.sin(init_yaw_1) * scale, 0]
+                    init_0 = init_pos_0 + [0,0,init_yaw_0] + init_lin_vel_0 + [0,0,0]
+                    init_1 = init_pos_1 + [0,0,init_yaw_1] + init_lin_vel_1 + [0,0,0]
+                    init = [init_0, init_1]
+
+                    waypoints_dict = {}
+                    waypoints_dict['drone0'] =[]
+                    waypoints_dict['drone1'] =[]
+                    for m in range(n):
+                        waypoints_dict['drone0'].append((init_pos_0[0] + init_lin_vel_0[0] * (m+1) * T_wp, init_pos_0[1] + init_lin_vel_0[1] * (m+1) * T_wp, init_pos_0[2]))
+                        waypoints_dict['drone1'].append((init_pos_1[0] + init_lin_vel_1[0] * (m+1) * T_wp, init_pos_1[1] + init_lin_vel_1[1] * (m+1) * T_wp, init_pos_1[2] + init_lin_vel_1[2] * (m+1) * T_wp))
+                    # waypoints_dict['drone1'].append((init_pos_1[0] + init_lin_vel_1[0] * (n+1) * T_wp, init_pos_1[1] + init_lin_vel_1[1] * (n+1) * T_wp, 40))
+                    waypoints_list = [waypoints_dict['drone0'], waypoints_dict['drone1']]
+                    test_case = Test(init=init, wp=waypoints_list, T=T_wp, idx=f"{i}_{j}_{k}_{l}", agent_list = ['drone0', 'drone1'])
+
+                    test_suite.append(test_case)
     return test_suite
 
 # def check_cache_hit(TS: List[Test]):
@@ -1236,19 +1251,22 @@ if __name__ == "__main__":
     # vint_list = [60, 150, 300, 450, 600, 750, 900, 1050, 1145]
     # rho_list = [10000, 43736, 87472, 120000]
 
-    theta_list = [-np.pi*3/4, -np.pi/2, -np.pi*3/8, -np.pi/4, 0, np.pi/4, np.pi/3, np.pi*3/4, np.pi]
+    # theta_list = [-np.pi*3/4, -np.pi/2, -np.pi*3/8, -np.pi/4, 0, np.pi/4, np.pi/3, np.pi*3/4, np.pi]
     # theta_list = [-np.pi*3/4, -np.pi/2, -np.pi*3/8, -np.pi/4, 0, np.pi/4, ]
-    
+    theta_list = [-np.pi*3/4]
+
     # vint_list = [900]
     vint_list = [600, 750, 900, 1050]
 
     # rho_list = [43736]
     rho_list = [10000, 43736, 87472, ]
 
-    TS = generate_test_suite(theta_list, vint_list, rho_list)
+    h_list = [-2000, 0, 2000]
+
+    TS = generate_test_suite(theta_list, vint_list, rho_list, h_list)
 
     # # # Per point simulation with 2d rotation
-    cache_hit, total_points, cache = test_suite_reduction(TS, rotate_3d=False, resolution = [0.1,0.1,0.1,0.1,0.5,0.1,0.1,0.5])
+    # cache_hit, total_points, cache = test_suite_reduction(TS, rotate_3d=False, resolution = [0.1,0.1,0.1,0.1,0.5,0.1,0.1,0.5])
 
     # # # Long simulation with 2d rotation
     # cache_hit, total_points, cache = test_suite_reduction_2(TS, rotate_3d=False, resolution = [0.1,0.1,0.1,0.1,0.5,0.1,0.1,0.5])
@@ -1260,7 +1278,7 @@ if __name__ == "__main__":
     # cache_hit, total_points, cache = test_suite_reduction_2(TS, rotate_3d=True, resolution = [0.1,0.1,0.5,0.1,0.1,0.5])
 
     # # Per point with 3d rotation and velocity translation
-    # cache_hit, total_points, cache = test_suite_reduction_3(TS, resolution = [0.1,0.1,0.5])
+    cache_hit, total_points, cache = test_suite_reduction_3(TS, resolution = [0.1,0.1,0.5])
     
     # # Long simulation with 3d rotation and velocity translation
     # cache_hit, total_points, cache = test_suite_reduction_4(TS, resolution = [0.1,0.1,0.5])

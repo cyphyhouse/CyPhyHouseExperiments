@@ -256,6 +256,15 @@ class Agent(AutomatonBase):
         self.__motion.send_target(p)
         #self.__motion.send_target_twist(p) # self.__init_twist
 
+    @property
+    def _target_twist_limit(self) -> Tuple[float, float, float]:
+        raise RuntimeWarning("Reading actuator value is not allowed")
+
+    @_target_twist_limit.setter
+    def _target_twist_limit(self, p: Tuple[float, float, float]) -> None:
+        print(f'sending target for agent {self.__uid} type {self.__motion._device_init_info.bot_type}')
+        self.__motion.send_target_twist_limit(p)
+        #self.__motion.send_target_twist(p) # self.__init_twist
 
     @property
     def uid(self) -> Hashable:
@@ -495,6 +504,11 @@ class Agent(AutomatonBase):
                 if time.time() - self.clock > 0.1:
                     print(tgt)
                     self._target = tgt
+                    self._target_twist_limit = (
+                        tgt_vector_v[0] + tgt_vector_h[0]+0.0000000001,
+                        tgt_vector_v[1] + tgt_vector_h[1]+0.0000000001,
+                        tgt_vector_v[2] + tgt_vector_h[2]+0.0000000001,
+                    )
                     self.ra_waypoint = tgt
                     self.clock = time.time()
 
@@ -648,6 +662,11 @@ class Agent(AutomatonBase):
                     tgt = self.__way_points[0] # self.__way_points.pop(0)
                     rospy.logdebug("%s going to %s." % (self, str(tgt)))
                     self._target = tgt
+                    self._target_twist_limit = (
+                        self.__motion._init_linear_velocity[0]+0.0000000001,
+                        self.__motion._init_linear_velocity[1]+0.0000000001,
+                        self.__motion._init_linear_velocity[2]+0.0000000001,
+                    )
             else:
                 # Not enough contract for the plan. Keep only current contracts
                 self._free_contr = acquired - self._curr_contr
@@ -674,8 +693,13 @@ class Agent(AutomatonBase):
                 if self.__way_points:
                     tgt = self.__way_points[0]
                     rospy.logdebug("%s going to %s." % (self, str(tgt)))
-                    self._target = tgt                     
-
+                    self._target = tgt           
+                    self._target_twist_limit = (
+                        self.__motion._init_linear_velocity[0]+0.0000000001,
+                        self.__motion._init_linear_velocity[1]+0.0000000001,
+                        self.__motion._init_linear_velocity[2]+0.0000000001,
+                    )
+                    
     def _pre_succeed(self) -> bool:
         return self._status == Agent.Status.MOVING and len(self._plan) == 1 \
             and self._membership_query(StampedPoint(self.clk.to_sec(), self._position),
