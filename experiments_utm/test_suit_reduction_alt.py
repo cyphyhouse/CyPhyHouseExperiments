@@ -28,8 +28,8 @@ class TestSuiteCache:
         self.cache_dict = {}
         self.resolution = resolution
 
-    def in_cache_2(self, state, desired_velocity):
-        key = self.generate_key_2(state, desired_velocity)
+    def in_cache_2(self, state, desired_velocity, rotate_3d):
+        key = self.generate_key_2(state, desired_velocity, rotate_3d)
                     
         if key in self.cache_dict:
             return True 
@@ -51,24 +51,30 @@ class TestSuiteCache:
         else:
             return False
 
-    def get_next_state_2(self, state, desired_velocity):
+    def get_next_state_2(self, state, desired_velocity, rotate_3d):
         roll = state[3]
         pitch = state[4] 
         yaw = state[5]
 
-        key = self.generate_key_2(state, desired_velocity)
+        key = self.generate_key_2(state, desired_velocity, rotate_3d)
                     
         new_state = copy.deepcopy(self.cache_dict[key])
 
         vx = state[6]
         vy = state[7]
         vz = state[8]
-        v_body = self.convert_pos_to_body([vx, vy, vz], roll, pitch, yaw)
+        if rotate_3d:
+            v_body = self.convert_pos_to_body([vx, vy, vz], roll, pitch, yaw)
+        else:
+            v_body = self.convert_pos_to_body([vx, vy, vz], 0, 0, yaw)
 
         vdesire_x = state[18]
         vdesire_y = state[19]
         vdesire_z = state[20]
-        vdesire_body = self.convert_pos_to_body([vdesire_x, vdesire_y, vdesire_z], roll, pitch, yaw)
+        if rotate_3d:
+            vdesire_body = self.convert_pos_to_body([vdesire_x, vdesire_y, vdesire_z], roll, pitch, yaw)
+        else:
+            vdesire_body = self.convert_pos_to_body([vdesire_x, vdesire_y, vdesire_z], 0, 0, yaw)
 
         new_state[3] += state[3]
         new_state[4] += state[4]
@@ -86,9 +92,14 @@ class TestSuiteCache:
         y_offset = new_state[1] + v_body[1]
         z_offset = new_state[2] + v_body[2]
 
-        offset = self.convert_body_to_pos([x_offset, y_offset, z_offset], roll, pitch, yaw)
-        next_v = self.convert_body_to_pos([next_vx_body, next_vy_body, next_vz_body], roll, pitch, yaw)
-        next_vdesire = self.convert_body_to_pos([next_desire_vx_body, next_desire_vy_body, next_desire_vz_body], roll, pitch, yaw)
+        if rotate_3d:
+            offset = self.convert_body_to_pos([x_offset, y_offset, z_offset], roll, pitch, yaw)
+            next_v = self.convert_body_to_pos([next_vx_body, next_vy_body, next_vz_body], roll, pitch, yaw)
+            next_vdesire = self.convert_body_to_pos([next_desire_vx_body, next_desire_vy_body, next_desire_vz_body], roll, pitch, yaw)
+        else:
+            offset = self.convert_body_to_pos([x_offset, y_offset, z_offset], 0, 0, yaw)
+            next_v = self.convert_body_to_pos([next_vx_body, next_vy_body, next_vz_body], 0, 0, yaw)
+            next_vdesire = self.convert_body_to_pos([next_desire_vx_body, next_desire_vy_body, next_desire_vz_body], 0, 0, yaw)
 
         new_state[0] = state[0] + offset[0]
         new_state[1] = state[1] + offset[1]
@@ -236,14 +247,16 @@ class TestSuiteCache:
 
     #     return new_state
 
-    def add_test_run_2(self, trajectories):
+    def add_test_run_2(self, trajectories, rotate_3d):
         for i, time_step in enumerate(trajectories):
             for k, point in enumerate(time_step):
                 desired_velocity = point[18:21]
                 state = point[:-1]
                 ra = point[-1]
-                if not self.in_cache_2(state, desired_velocity):
-                    key = self.generate_key_2(state, desired_velocity)
+                if not self.in_cache_2(state, desired_velocity, rotate_3d):
+                    key = self.generate_key_2(state, desired_velocity, rotate_3d)
+                    # if key == (-2e-05, -3.0000000000000004e-05, 0.0):
+                    #     print('stop here')
                     if i+1 < len(trajectories):
                         next_state = copy.deepcopy(trajectories[i+1][k])
                         x_offset = (next_state[0] - state[0] - state[6]) 
@@ -254,23 +267,34 @@ class TestSuiteCache:
                         pitch = state[4]
                         yaw = state[5]
 
-                        offset_body = self.convert_pos_to_body([x_offset, y_offset, z_offset], roll, pitch, yaw)     
+                        if rotate_3d:
+                            offset_body = self.convert_pos_to_body([x_offset, y_offset, z_offset], roll, pitch, yaw)    
+                        else:
+                            offset_body = self.convert_pos_to_body([x_offset, y_offset, z_offset], 0, 0, yaw)
 
                         vx = state[6]
                         vy = state[7]
                         vz = state[8]
-                        v_body = self.convert_pos_to_body([vx, vy, vz], roll, pitch, yaw)
+                        if rotate_3d:
+                            v_body = self.convert_pos_to_body([vx, vy, vz], roll, pitch, yaw)
+                        else:
+                            v_body = self.convert_pos_to_body([vx, vy, vz], 0, 0, yaw)    
 
                         next_vx = next_state[6]
                         next_vy = next_state[7]
                         next_vz = next_state[8]
-                        nextv_body = self.convert_pos_to_body([next_vx, next_vy, next_vz], roll, pitch, yaw)
-
+                        if rotate_3d:
+                            nextv_body = self.convert_pos_to_body([next_vx, next_vy, next_vz], roll, pitch, yaw)
+                        else:
+                            nextv_body = self.convert_pos_to_body([next_vx, next_vy, next_vz], 0, 0, yaw)
+                        
                         vdesirex = next_state[18]
                         vdesirey = next_state[19]
                         vdesirez = next_state[20]
-
-                        vdesire_body = self.convert_pos_to_body([vdesirex, vdesirey, vdesirez], roll, pitch, yaw)
+                        if rotate_3d:
+                            vdesire_body = self.convert_pos_to_body([vdesirex, vdesirey, vdesirez], roll, pitch, yaw)
+                        else:
+                            vdesire_body = self.convert_pos_to_body([vdesirex, vdesirey, vdesirez], 0, 0, yaw)
 
                         next_state[0] = offset_body[0]
                         next_state[1] = offset_body[1]
@@ -436,7 +460,7 @@ class TestSuiteCache:
         pos_body = list(pos_body)
         return pos_body
 
-    def generate_key_2(self, state, desired_velocity):
+    def generate_key_2(self, state, desired_velocity, rotate_3d):
         roll = state[3]
         pitch = state[4]
         yaw = state[5]
@@ -444,16 +468,25 @@ class TestSuiteCache:
         vx = state[6]
         vy = state[7]
         vz = state[8]
-        vbody = self.convert_pos_to_body([vx, vy, vz], roll, pitch, yaw)
+        if rotate_3d:
+            vbody = self.convert_pos_to_body([vx, vy, vz], roll, pitch, yaw)
+        else:
+            vbody = self.convert_pos_to_body([vx, vy, vz], 0, 0, yaw)
 
         vdesired_x = desired_velocity[0]
         vdesired_y = desired_velocity[1]
         vdesired_z = desired_velocity[2]
-        vdesired_body = self.convert_pos_to_body([vdesired_x, vdesired_y, vdesired_z], roll, pitch, yaw)
+        if rotate_3d:
+            vdesired_body = self.convert_pos_to_body([vdesired_x, vdesired_y, vdesired_z], roll, pitch, yaw)
+        else:
+            vdesired_body = self.convert_pos_to_body([vdesired_x, vdesired_y, vdesired_z], 0, 0, yaw)
 
         vdesired_body_offset = [vdesired_body[0] - vbody[0], vdesired_body[1] - vbody[1], vdesired_body[2] - vbody[2]]
         # key_state = [roll, pitch] + vdesired_body_offset
-        key_state = vdesired_body_offset
+        if rotate_3d:
+            key_state = vdesired_body_offset
+        else:
+            key_state = [roll, pitch] + vdesired_body_offset
         state_round = []
         for j, val in enumerate(key_state):
             state_round.append(self.__round(val, self.resolution[j]))
@@ -532,13 +565,18 @@ def load_parse_trajectory(test: Test):
     for i in range(test.num_agents):
         fn0 = f'./trajectories/drone{i}_{idx}'       
     
-        with open(fn0, 'rb') as f:
-            trajectory_0 = pickle.load(f)
+        try:
+            with open(fn0, 'rb') as f:
+                trajectory_0 = pickle.load(f)
+        except:
+            print(fn0)
+            return None
 
         parsed_trajectory = []
-        t_ref = trajectory_0[0][0]
-        t0 = trajectory_0[0][0]
-        for j in range(len(trajectory_0)):
+        offset = 0
+        t_ref = trajectory_0[offset][0]
+        t0 = trajectory_0[offset][0]
+        for j in range(offset,len(trajectory_0)):
             time = trajectory_0[j][0]
             x = trajectory_0[j][1]
             y = trajectory_0[j][2]
@@ -685,7 +723,7 @@ def generate_test_suite(
                     init_lin_vel_0 = [0, vown * scale, 0]
                     init_pos_1 = [xint * scale, yint * scale, init_pos_0[2] - h*scale]
                     init_yaw_1 = np.pi / 2 + phi
-                    init_lin_vel_1 = [vint * np.cos(init_yaw_1) * scale, vint * np.sin(init_yaw_1) * scale, h*vint/rho*scale]
+                    init_lin_vel_1 = [vint * np.cos(init_yaw_1) * scale, vint * np.sin(init_yaw_1) * scale, h/T*scale]
                 
 
                     # if np.isnan(phi) or np.isnan(psi) or np.isnan(vown):
@@ -753,7 +791,7 @@ def generate_test_suite(
 #             cache.add_test_run(trajectory)
 #     return cache_hit, total_points, cache
 
-def plot_trajectory(cache_trajectory, simulate_trajectory, idx = ''):
+def plot_trajectory(cache_trajectory, simulate_trajectory, idx = '', test_case = 0):
     color = ['b.','g.']
     x_cache_0 = []
     y_cache_0 = []
@@ -821,20 +859,46 @@ def plot_trajectory(cache_trajectory, simulate_trajectory, idx = ''):
     plt.figure(0)
     plt.plot(x_cache_0, y_cache_0, 'g')
     plt.plot(x_cache_1, y_cache_1, 'g')
+    cache_hit_0 = []
+    cache_hit_1 = []
+    cache_miss_0 = []
+    cache_miss_1 = []
     for i in range(len(not_in_cache)):
         if not_in_cache[i] == 1:
+            cache_miss_0.append(z_cache_0[i])
+            cache_miss_1.append(z_cache_1[i])
+            cache_hit_0.append(float('nan'))
+            cache_hit_1.append(float('nan'))
+
             plt.plot(x_cache_0[i], y_cache_0[i], 'r.')
             plt.plot(x_cache_1[i], y_cache_1[i], 'r.')
         else:
+            cache_miss_0.append(float('nan'))
+            cache_miss_1.append(float('nan'))
+            cache_hit_0.append(z_cache_0[i])
+            cache_hit_1.append(z_cache_1[i])
+
             plt.plot(x_cache_0[i], y_cache_0[i], 'g.')
             plt.plot(x_cache_1[i], y_cache_1[i], 'g.')
         
     plt.plot(x_simulate_0, y_simulate_0, 'b')
     plt.plot(x_simulate_1, y_simulate_1, 'b')
+    fn = f'./plots/{test_case}_{idx}.png'
+    plt.savefig(fn)
+    
+    # plt.show()
+    plt.clf()
 
-    # plt.figure(1)
-    # plt.plot(z_cache_0, 'g')
-    # plt.plot(z_simulate_0, 'b')
+
+    plt.figure(1)
+    plt.plot(cache_hit_0, 'g.')
+    plt.plot(cache_hit_1, 'g.')
+    plt.plot(cache_miss_0, 'r.')
+    plt.plot(cache_miss_1, 'r.')
+    plt.plot(z_cache_1, 'g')
+    plt.plot(z_simulate_1, 'b')
+    plt.plot(z_cache_0, 'g')
+    plt.plot(z_simulate_0, 'b')
     
     # plt.figure(2)
     # plt.plot(roll_cache_0, 'g')
@@ -865,7 +929,7 @@ def plot_trajectory(cache_trajectory, simulate_trajectory, idx = ''):
     # plt.plot(yaw_simulate_1, 'b')
     
     # plt.show()
-    fn = f'./plots/{idx}.png'
+    fn = f'./plots/{test_case}_z_{idx}.png'
     plt.savefig(fn)
     
     # plt.show()
@@ -905,7 +969,7 @@ def pid_computeCommand(error, dt, gains):
 
     return cmd
 
-def agent_planner(state, ra, wp):
+def agent_planner(state, ra, wp, init_velocity, p):
     period = 0.012
 
     x = state[0]
@@ -916,8 +980,12 @@ def agent_planner(state, ra, wp):
     vz = state[8]
 
     tgt = (wp[0], wp[1], wp[2])    
+    ra_received = True
+    tgt_vector_v = (0,0,0)
+    tgt_vector_h = (0,0,0)
     if RA(ra[0]) == RA.NA and RA(ra[1]) == RA.NA:
         tgt = (wp[0], wp[1], wp[2])
+        ra_received = False
     else:
         tgt_vector_v = (0,0,0)
         if RA(ra[0]) == RA.CLIMB:
@@ -949,7 +1017,10 @@ def agent_planner(state, ra, wp):
 
     output_linear_x = pid_computeCommand(tgt[0] - x, period, [2,0,0])
     output_linear_y = pid_computeCommand(tgt[1] - y, period, [2,0,0])
-    output_linear_z = pid_computeCommand(tgt[2] - z, period, [2,0,0])
+
+    # if p>2:
+    #     p-= 0.005
+    output_linear_z = pid_computeCommand(tgt[2] - z, period, [p,0,0])
 
     yaw_error = 0
     output_angular_z = pid_computeCommand(yaw_error, period, [2,0,0])
@@ -977,7 +1048,25 @@ def agent_planner(state, ra, wp):
     output_y = output_linear_y
     output_z = output_linear_z
 
-    absolute_maximum_xy = 10
+    if ra_received:
+        vx_desired = tgt_vector_v[0] + tgt_vector_h[0]+0.0000000001
+        vy_desired = tgt_vector_v[1] + tgt_vector_h[1]+0.0000000001
+        vz_desired = tgt_vector_v[2] + tgt_vector_h[2]+0.0000000001
+    else:
+        vx_desired = init_velocity[0]+0.0000000001
+        vy_desired = init_velocity[1]+0.0000000001
+        vz_desired = init_velocity[2]+0.0000000001
+
+    if (abs(output_x) > abs(vx_desired)):
+        output_x *= abs(vx_desired) / abs(output_x)
+
+    if (abs(output_y) > abs(vy_desired)):
+        output_y *= abs(vy_desired) / abs(output_y)
+    
+    if (abs(output_z) > abs(vz_desired)):
+        output_z *= abs(vz_desired) / abs(output_z)
+    
+    absolute_maximum_xy = 100.0
     absolute_value_xy = np.sqrt(output_x * output_x + output_y * output_y)
     if absolute_value_xy > absolute_maximum_xy:
         output_x *= absolute_maximum_xy / absolute_value_xy
@@ -990,10 +1079,10 @@ def agent_planner(state, ra, wp):
         output_x *= absolute_maximum / absolute_value
         output_y *= absolute_maximum / absolute_value
         output_z *= absolute_maximum / absolute_value
-    
+
     return [output_x, output_y, output_z]
 
-def test_suite_reduction(TS: List[Test], rotate_3d = True, resolution = [0.1,0.1,0.1,0.1,0.1]):
+def test_suite_reduction(TS: List[Test], rotate_3d = True, resolution = [0.1,0.1,0.1,0.1,0.1], test_case = 0):
     cache = TestSuiteCache(resolution = resolution)
     execs = []
     cache_hit = 0
@@ -1002,9 +1091,11 @@ def test_suite_reduction(TS: List[Test], rotate_3d = True, resolution = [0.1,0.1
     for k, test in enumerate(TS):
         cache_size = len(cache.cache_dict)
         not_in_cache = False 
+        # print(f"Start loading trajectory {test.idx}")
         parsed_trajectory = load_parse_trajectory(test)
         if parsed_trajectory is None:
             continue
+        # print(f"Done loading trajectory {test.idx}")
         processed_trajectories += 1
         total_points += len(parsed_trajectory) * 2
         
@@ -1012,20 +1103,33 @@ def test_suite_reduction(TS: List[Test], rotate_3d = True, resolution = [0.1,0.1
         trajectory_hit = 0
         current_trajectory = []
         
-        alpha = parsed_trajectory[0]
+        offset = 1
+        alpha = parsed_trajectory[offset]
         print(f"processed trajectories {processed_trajectories}, test {test.idx}, total points {total_points}, cache size {cache_size}, hit {cache_hit}")
+        # num_agent = test.num_agents
+        # # if processed_trajectories == 7:
+        # #     print("stop here")
+        # for i in range(1, len(parsed_trajectory)-1):
+        #     next_alpha = []
+        #     not_in_cache = False
+        #     # if i == 12:
+        #     #     print('stop here')
+        #     # print(parsed_trajectory[i+1][0])
+        #     for j, agent_state in enumerate(alpha):
+        #         ra = parsed_trajectory[i][j][-1]
+        #         desired_velocity = agent_planner(agent_state, ra, test.waypoints[j][0])
         num_agent = test.num_agents
-        # if processed_trajectories == 7:
-        #     print("stop here")
-        for i in range(len(parsed_trajectory)-1):
+        pz = 20
+        init_velocity = [test.init[0][6:9], test.init[1][6:9]]
+        l = 0
+        for i in range(offset, len(parsed_trajectory)-1):
             next_alpha = []
             not_in_cache = False
-            # if i == 12:
-            #     print('stop here')
-            # print(parsed_trajectory[i+1][0])
+            if pz > 2:
+                pz -= 0.005
             for j, agent_state in enumerate(alpha):
                 ra = parsed_trajectory[i][j][-1]
-                desired_velocity = agent_planner(agent_state, ra, test.waypoints[j][0])
+                desired_velocity = agent_planner(agent_state, ra, test.waypoints[j][0], init_velocity[j], pz)
                 if cache.in_cache(agent_state, desired_velocity, rotate_3d = rotate_3d):
                     next_state = cache.get_next_state(agent_state, desired_velocity, rotate_3d = rotate_3d)
                     # cache_hit += 1
@@ -1059,11 +1163,11 @@ def test_suite_reduction(TS: List[Test], rotate_3d = True, resolution = [0.1,0.1
         # current_trajectory += simulated_trajectory
 
         # if trajectory_hit / trajectory_length > 0.5:
-        plot_trajectory(current_trajectory, parsed_trajectory, test.idx)
+        plot_trajectory(current_trajectory, parsed_trajectory, test.idx, test_case)
         
     return cache_hit, total_points, cache
 
-def test_suite_reduction_2(TS: List[Test], rotate_3d = True, resolution = [0.1,0.1,0.1,0.1,0.1]):
+def test_suite_reduction_2(TS: List[Test], rotate_3d = True, resolution = [0.1,0.1,0.1,0.1,0.1], test_case = 0):
     cache = TestSuiteCache(resolution = resolution)
     execs = []
     cache_hit = 0
@@ -1071,7 +1175,7 @@ def test_suite_reduction_2(TS: List[Test], rotate_3d = True, resolution = [0.1,0
     processed_trajectories = 0
     for k, test in enumerate(TS):
         cache_size = len(cache.cache_dict)
-        not_in_cache = False 
+        not_in_cache = False  
         parsed_trajectory = load_parse_trajectory(test)
         if parsed_trajectory is None:
             continue
@@ -1082,17 +1186,30 @@ def test_suite_reduction_2(TS: List[Test], rotate_3d = True, resolution = [0.1,0
         trajectory_hit = 0
         current_trajectory = []
         
-        alpha = parsed_trajectory[0]
+        offset = 1
+        alpha = parsed_trajectory[offset]
         print(f"processed trajectories {processed_trajectories}, test {test.idx}, total points {total_points}, cache size {cache_size}, hit {cache_hit}")
+        # num_agent = test.num_agents
+        # for i in range(1, len(parsed_trajectory)-1):
+        #     next_alpha = []
+        #     not_in_cache = False
+        #     # if processed_trajectories == 3:
+        #     #     print('stop here')
+        #     for j, agent_state in enumerate(alpha):
+        #         ra = agent_state[-1]
+        #         desired_velocity = agent_planner(agent_state, ra, test.waypoints[j][0])
         num_agent = test.num_agents
-        for i in range(len(parsed_trajectory)-1):
+        pz = 20
+        init_velocity = [test.init[0][6:9], test.init[1][6:9]]
+        l = 0
+        for i in range(offset, len(parsed_trajectory)-1):
             next_alpha = []
             not_in_cache = False
-            # if processed_trajectories == 3:
-            #     print('stop here')
+            if pz > 2:
+                pz -= 0.005
             for j, agent_state in enumerate(alpha):
-                ra = agent_state[-1]
-                desired_velocity = agent_planner(agent_state, ra, test.waypoints[j][0])
+                ra = parsed_trajectory[i][j][-1]
+                desired_velocity = agent_planner(agent_state, ra, test.waypoints[j][0], init_velocity[j], pz)
                 if cache.in_cache(agent_state, desired_velocity, rotate_3d = rotate_3d):
                     next_state = cache.get_next_state(agent_state, desired_velocity, rotate_3d = rotate_3d)
                     # cache_hit += 1
@@ -1126,11 +1243,11 @@ def test_suite_reduction_2(TS: List[Test], rotate_3d = True, resolution = [0.1,0
         current_trajectory += [time_step + [1] for time_step in simulated_trajectory]
 
         # if trajectory_hit / trajectory_length > 0.5:
-        plot_trajectory(current_trajectory, parsed_trajectory, test.idx)
+        plot_trajectory(current_trajectory, parsed_trajectory, test.idx, test_case)
         
     return cache_hit, total_points, cache
 
-def test_suite_reduction_3(TS: List[Test], resolution = [0.1,0.1,0.1]):
+def test_suite_reduction_3(TS: List[Test], rotate_3d = True, resolution = [0.1,0.1,0.1], test_case = 0):
     cache = TestSuiteCache(resolution = resolution)
     execs = []
     cache_hit = 0
@@ -1148,28 +1265,32 @@ def test_suite_reduction_3(TS: List[Test], resolution = [0.1,0.1,0.1]):
         trajectory_length = len(parsed_trajectory*2)
         trajectory_hit = 0
         current_trajectory = []
-        # if k == 3:
+        # if k == 2:
         #     print("stop here")
         
-        alpha = parsed_trajectory[0]
+        offset = 1
+        alpha = parsed_trajectory[offset]
         print(f"processed trajectories {processed_trajectories}, test {test.idx}, total points {total_points}, cache size {cache_size}, hit {cache_hit}")
         num_agent = test.num_agents
-        for i in range(len(parsed_trajectory)-1):
+        pz = 20
+        init_velocity = [test.init[0][6:9], test.init[1][6:9]]
+        l = 0
+        for i in range(offset, len(parsed_trajectory)-1):
             next_alpha = []
             not_in_cache = False
-            # if i > 50:
-            #     print('stop here')
+            if pz > 2:
+                pz -= 0.005
             for j, agent_state in enumerate(alpha):
                 ra = parsed_trajectory[i][j][-1]
-                desired_velocity = agent_planner(agent_state, ra, test.waypoints[j][0])
-                if cache.in_cache_2(agent_state, desired_velocity):
-                    next_state = cache.get_next_state_2(agent_state, desired_velocity)
+                desired_velocity = agent_planner(agent_state, ra, test.waypoints[j][0], init_velocity[j], pz)
+                if cache.in_cache_2(agent_state, desired_velocity, rotate_3d):
+                    next_state = cache.get_next_state_2(agent_state, desired_velocity, rotate_3d)
                     trajectory_hit += 1
                     next_alpha.append(next_state)
                 else:
                     not_in_cache = True
                     next_alpha = parsed_trajectory[i+1]
-                    cache.add_test_run_2([parsed_trajectory[i], parsed_trajectory[i+1]])
+                    cache.add_test_run_2([parsed_trajectory[i], parsed_trajectory[i+1]], rotate_3d)
                     
                 if not_in_cache:
                     break 
@@ -1180,12 +1301,11 @@ def test_suite_reduction_3(TS: List[Test], resolution = [0.1,0.1,0.1]):
             
             alpha = next_alpha
 
-        plot_trajectory(current_trajectory, parsed_trajectory, test.idx)
+        plot_trajectory(current_trajectory, parsed_trajectory, test.idx, test_case)
         
     return cache_hit, total_points, cache
 
-
-def test_suite_reduction_4(TS: List[Test], resolution = [0.1,0.1,0.1]):
+def test_suite_reduction_4(TS: List[Test], rotate_3d = True, resolution = [0.1,0.1,0.1], test_case = 0):
     cache = TestSuiteCache(resolution = resolution)
     execs = []
     cache_hit = 0
@@ -1203,22 +1323,26 @@ def test_suite_reduction_4(TS: List[Test], resolution = [0.1,0.1,0.1]):
         trajectory_length = len(parsed_trajectory*2)
         trajectory_hit = 0
         current_trajectory = []
-        # if k == 3:
+        # if k == 2:
         #     print("stop here")
         
-        alpha = parsed_trajectory[0]
+        offset = 1
+        alpha = parsed_trajectory[offset]
         print(f"processed trajectories {processed_trajectories}, test {test.idx}, total points {total_points}, cache size {cache_size}, hit {cache_hit}")
         num_agent = test.num_agents
-        for i in range(len(parsed_trajectory)-1):
+        pz = 20
+        init_velocity = [test.init[0][6:9], test.init[1][6:9]]
+        l = 0
+        for i in range(offset, len(parsed_trajectory)-1):
             next_alpha = []
             not_in_cache = False
-            # if i > 50:
-            #     print('stop here')
+            if pz > 2:
+                pz -= 0.005
             for j, agent_state in enumerate(alpha):
                 ra = parsed_trajectory[i][j][-1]
-                desired_velocity = agent_planner(agent_state, ra, test.waypoints[j][0])
-                if cache.in_cache_2(agent_state, desired_velocity):
-                    next_state = cache.get_next_state_2(agent_state, desired_velocity)
+                desired_velocity = agent_planner(agent_state, ra, test.waypoints[j][0], init_velocity[j], pz)
+                if cache.in_cache_2(agent_state, desired_velocity, rotate_3d):
+                    next_state = cache.get_next_state_2(agent_state, desired_velocity, rotate_3d)
                     trajectory_hit += 1
                     next_alpha.append(next_state)
                 else:
@@ -1238,12 +1362,104 @@ def test_suite_reduction_4(TS: List[Test], resolution = [0.1,0.1,0.1]):
         simulated_trajectory = []
         if not_in_cache:
             simulated_trajectory = parsed_trajectory[i:]
-            cache.add_test_run_2(simulated_trajectory)
+            cache.add_test_run_2(simulated_trajectory, rotate_3d)
         current_trajectory += [time_step + [1] for time_step in simulated_trajectory]
 
-        plot_trajectory(current_trajectory, parsed_trajectory, test.idx)
+        plot_trajectory(current_trajectory, parsed_trajectory, test.idx, test_case)
         
     return cache_hit, total_points, cache
+
+# def test_suite_reduction_4(TS: List[Test], resolution = [0.1,0.1,0.1]):
+#     cache = TestSuiteCache(resolution = resolution)
+#     execs = []
+#     cache_hit = 0
+#     total_points = 0
+#     processed_trajectories = 0
+#     for k, test in enumerate(TS):
+#         cache_size = len(cache.cache_dict)
+#         not_in_cache = False 
+#         parsed_trajectory = load_parse_trajectory(test)
+#         if parsed_trajectory is None:
+#             continue
+#         processed_trajectories += 1
+#         total_points += len(parsed_trajectory) * 2
+        
+#         trajectory_length = len(parsed_trajectory*2)
+#         trajectory_hit = 0
+#         current_trajectory = []
+#         # if k == 3:
+#         #     print("stop here")
+        
+#         alpha = parsed_trajectory[0]
+#         print(f"processed trajectories {processed_trajectories}, test {test.idx}, total points {total_points}, cache size {cache_size}, hit {cache_hit}")
+#         num_agent = test.num_agents
+#         for i in range(1, len(parsed_trajectory)-1):
+#             next_alpha = []
+#             not_in_cache = False
+#             # if i > 50:
+#             #     print('stop here')
+#             for j, agent_state in enumerate(alpha):
+#                 ra = parsed_trajectory[i][j][-1]
+#                 desired_velocity = agent_planner(agent_state, ra, test.waypoints[j][0])
+#                 if cache.in_cache_2(agent_state, desired_velocity):
+#                     next_state = cache.get_next_state_2(agent_state, desired_velocity)
+#                     trajectory_hit += 1
+#                     next_alpha.append(next_state)
+#                 else:
+#                     not_in_cache = True
+#                     break
+                    
+#             if not_in_cache:
+#                 break 
+
+#             if not not_in_cache:
+#                 cache_hit += 2
+#             # current_trajectory.append(alpha+[int(not_in_cache)])
+#             current_trajectory.append(alpha+[int(not_in_cache)])
+
+#             alpha = next_alpha
+
+#         simulated_trajectory = []
+#         if not_in_cache:
+#             simulated_trajectory = parsed_trajectory[i:]
+#             cache.add_test_run_2(simulated_trajectory)
+#         current_trajectory += [time_step + [1] for time_step in simulated_trajectory]
+
+#         plot_trajectory(current_trajectory, parsed_trajectory, test.idx)
+        
+#     return cache_hit, total_points, cache
+
+def plot_cache_cell_coverage(cache: TestSuiteCache, test_case = 0):
+    
+    for key in cache.cache_dict:
+        plt.plot(key[-3], key[-2], 'r.')
+    
+    fn = f'./plots/{test_case}_cell_coverage.png'
+    plt.savefig(fn)
+    # plt.show()
+    plt.clf()
+
+def plot_acas_input_coverage(trajectory_dict):
+    for key in trajectory_dict:
+        parsed_trajectory = trajectory_dict[key]
+        for time_step in parsed_trajectory:
+            x_offset = time_step[0][0] - time_step[1][0]
+            y_offset = time_step[0][1] - time_step[1][1]
+            plt.plot(x_offset, y_offset, 'r.')
+    
+    fn = f'./plots/acas_inpu_coverage.png'
+    plt.savefig(fn)
+    plt.show()
+    # plt.clf()
+
+def plot_cache_content(cache: TestSuiteCache, test_case = 0):
+    for key in cache.cache_dict:
+        content = cache.cache_dict[key]
+        plt.plot([0, content[0]], [0, content[1]], 'r')
+
+    fn = f'./plots/{test_case}_cache_content.png'
+    plt.savefig(fn)
+    plt.clf()
 
 if __name__ == "__main__":
 
@@ -1253,36 +1469,129 @@ if __name__ == "__main__":
 
     # theta_list = [-np.pi*3/4, -np.pi/2, -np.pi*3/8, -np.pi/4, 0, np.pi/4, np.pi/3, np.pi*3/4, np.pi]
     # theta_list = [-np.pi*3/4, -np.pi/2, -np.pi*3/8, -np.pi/4, 0, np.pi/4, ]
-    theta_list = [-np.pi*3/4]
+    # theta_list = [-np.pi*3/4]
 
-    # vint_list = [900]
+    # # vint_list = [900]
+    # vint_list = [600, 750, 900, 1050]
+
+    # # rho_list = [43736]
+    # rho_list = [10000, 43736, 87472, ]
+
+    # h_list = [-2000, 0, 2000]
+
+    theta_list = [-np.pi*3/4, -np.pi*3/8, np.pi/3]
     vint_list = [600, 750, 900, 1050]
-
-    # rho_list = [43736]
     rho_list = [10000, 43736, 87472, ]
-
     h_list = [-2000, 0, 2000]
+
+    # theta_list = [-np.pi*3/4]
+    # # vint_list = [600, 900]
+    # vint_list = [600]
+    # rho_list = [10000, 10000]
+    # h_list = [0]
+
+    # theta_list = [-np.pi*3/4,-np.pi*3/4]
+    # vint_list = [600]
+    # rho_list = [10000]
+    # h_list = [0]
 
     TS = generate_test_suite(theta_list, vint_list, rho_list, h_list)
 
     # # # Per point simulation with 2d rotation
-    # cache_hit, total_points, cache = test_suite_reduction(TS, rotate_3d=False, resolution = [0.1,0.1,0.1,0.1,0.5,0.1,0.1,0.5])
+    # cache_hit_0, total_points_0, cache_0 = test_suite_reduction(TS, rotate_3d=False, resolution = [0.00001,0.00001,0.00001,0.00001,0.01,0.00001,0.00001,0.01], test_case = 0)
+    # cache_size_0 = len(cache_0.cache_dict)
+    # resolution_0 = cache_0.resolution
+    # plot_cache_cell_coverage(cache_0, 0)
+    # plot_cache_content(cache_0, 0)
+    # print('Per point simulation with 2d rotation')
+    # print(f'Number of total points visited {total_points_0}, Number of cache hit {cache_hit_0}, Size of cache {cache_size_0}, Resolution {resolution_0}')
 
     # # # Long simulation with 2d rotation
-    # cache_hit, total_points, cache = test_suite_reduction_2(TS, rotate_3d=False, resolution = [0.1,0.1,0.1,0.1,0.5,0.1,0.1,0.5])
+    # cache_hit_1, total_points_1, cache_1 = test_suite_reduction_2(TS, rotate_3d=False, resolution = [0.00001,0.00001,0.00001,0.00001,0.01,0.00001,0.00001,0.01], test_case = 1)
+    # cache_size_1 = len(cache_1.cache_dict)
+    # resolution_1 = cache_1.resolution
+    # plot_cache_cell_coverage(cache_1, 1)
+    # plot_cache_content(cache_1, 1)
+    # print('Long simulation with 2d rotation')
+    # print(f'Number of total points visited {total_points_1}, Number of cache hit {cache_hit_1}, Size of cache {cache_size_1}, Resolution {resolution_1}')
+
+    # # Per point simulation with 2d rotation and velocity translation
+    cache_hit_6, total_points_6, cache_6 = test_suite_reduction_3(TS, rotate_3d = False, resolution = [0.00001,0.00001,0.00001,0.00001,0.01], test_case = 6)
+    cache_size_6 = len(cache_6.cache_dict)
+    resolution_6 = cache_6.resolution
+    plot_cache_cell_coverage(cache_6, 6)
+    plot_cache_content(cache_6, 6)
+    print('Per point simulation with 2d rotation and velocity translation')
+    print(f'Number of total points visited {total_points_6}, Number of cache hit {cache_hit_6}, Size of cache {cache_size_6}, Resolution {resolution_6}')
+
+    # # Long simulation with 2d rotation and velocity translation
+    cache_hit_7, total_points_7, cache_7 = test_suite_reduction_4(TS, rotate_3d = True, resolution = [0.00001,0.00001,0.00001,0.00001,0.01], test_case = 7)
+    cache_size_7 = len(cache_7.cache_dict)
+    resolution_7 = cache_7.resolution
+    plot_cache_cell_coverage(cache_7, 7)
+    plot_cache_content(cache_7, 7)
+    print('Long simulation with 2d rotation and velocity translation')
+    print(f'Number of total points visited {total_points_7}, Number of cache hit {cache_hit_7}, Size of cache {cache_size_7}, Resolution {resolution_7}')
 
     # # Per point simulation with 3d rotation
-    # cache_hit, total_points, cache = test_suite_reduction(TS, rotate_3d=True, resolution = [0.1,0.1,0.5,0.1,0.1,0.5])
+    # cache_hit_2, total_points_2, cache_2 = test_suite_reduction(TS, rotate_3d=True, resolution = [0.00001,0.00001,0.01,0.00001,0.00001,0.01], test_case = 2)
+    # cache_size_2 = len(cache_2.cache_dict)
+    # resolution_2 = cache_2.resolution
+    # plot_cache_cell_coverage(cache_2, 2)
+    # plot_cache_content(cache_2, 2)
+    # print('Per point simulation with 3d rotation')
+    # print(f'Number of total points visited {total_points_2}, Number of cache hit {cache_hit_2}, Size of cache {cache_size_2}, Resolution {resolution_2}')
 
     # # Long simulation with 3d rotation
-    # cache_hit, total_points, cache = test_suite_reduction_2(TS, rotate_3d=True, resolution = [0.1,0.1,0.5,0.1,0.1,0.5])
+    # cache_hit_3, total_points_3, cache_3 = test_suite_reduction_2(TS, rotate_3d=True, resolution = [0.00001,0.00001,0.01,0.00001,0.00001,0.01], test_case = 3)
+    # cache_size_3 = len(cache_3.cache_dict)
+    # resolution_3 = cache_3.resolution
+    # plot_cache_cell_coverage(cache_3, 3)
+    # plot_cache_content(cache_3, 3)
+    # print('Long simulation with 3d rotation')
+    # print(f'Number of total points visited {total_points_3}, Number of cache hit {cache_hit_3}, Size of cache {cache_size_3}, Resolution {resolution_3}')
 
     # # Per point with 3d rotation and velocity translation
-    cache_hit, total_points, cache = test_suite_reduction_3(TS, resolution = [0.1,0.1,0.5])
-    
+    # cache_hit_4, total_points_4, cache_4 = test_suite_reduction_3(TS, rotate_3d = True, resolution = [0.00001,0.00001,0.01], test_case = 4)
+    # cache_size_4 = len(cache_4.cache_dict)
+    # resolution_4 = cache_4.resolution
+    # plot_cache_cell_coverage(cache_4, 4)
+    # plot_cache_content(cache_4, 4)
+    # print('Per point with 3d rotation and velocity translation')
+    # print(f'Number of total points visited {total_points_4}, Number of cache hit {cache_hit_4}, Size of cache {cache_size_4}, Resolution {resolution_4}')
+
     # # Long simulation with 3d rotation and velocity translation
-    # cache_hit, total_points, cache = test_suite_reduction_4(TS, resolution = [0.1,0.1,0.5])
-    
-    cache_size = len(cache.cache_dict)
-    resolution = cache.resolution
-    print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
+    # cache_hit_5, total_points_5, cache_5 = test_suite_reduction_4(TS, rotate_3d = True, resolution = [0.00001,0.00001,0.01], test_case = 5)
+    # cache_size_5 = len(cache_5.cache_dict)
+    # resolution_5 = cache_5.resolution
+    # plot_cache_cell_coverage(cache_5, 5)
+    # plot_cache_content(cache_5, 5)
+    # print('Long simulation with 3d rotation and velocity translation')
+    # print(f'Number of total points visited {total_points_5}, Number of cache hit {cache_hit_5}, Size of cache {cache_size_5}, Resolution {resolution_5}')
+
+    # # cache_size = len(cache.cache_dict)
+    # # resolution = cache.resolution
+    # # print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
+    # print('Per point simulation with 2d rotation')
+    # print(f'Number of total points visited {total_points_0}, Number of cache hit {cache_hit_0}, Size of cache {cache_size_0}, Resolution {resolution_0}')
+
+    # print('Long simulation with 2d rotation')
+    # print(f'Number of total points visited {total_points_1}, Number of cache hit {cache_hit_1}, Size of cache {cache_size_1}, Resolution {resolution_1}')
+
+    # print('Per point simulation with 2d rotation and velocity translation')
+    # print(f'Number of total points visited {total_points_6}, Number of cache hit {cache_hit_6}, Size of cache {cache_size_6}, Resolution {resolution_6}')
+
+    # print('Long simulation with 2d rotation and velocity translation')
+    # print(f'Number of total points visited {total_points_7}, Number of cache hit {cache_hit_7}, Size of cache {cache_size_7}, Resolution {resolution_7}')
+
+    # print('Per point simulation with 3d rotation')
+    # print(f'Number of total points visited {total_points_2}, Number of cache hit {cache_hit_2}, Size of cache {cache_size_2}, Resolution {resolution_2}')
+
+    # print('Long simulation with 3d rotation')
+    # print(f'Number of total points visited {total_points_3}, Number of cache hit {cache_hit_3}, Size of cache {cache_size_3}, Resolution {resolution_3}')
+
+    # print('Per point with 3d rotation and velocity translation')
+    # print(f'Number of total points visited {total_points_4}, Number of cache hit {cache_hit_4}, Size of cache {cache_size_4}, Resolution {resolution_4}')
+
+    # print('Long simulation with 3d rotation and velocity translation')
+    # print(f'Number of total points visited {total_points_5}, Number of cache hit {cache_hit_5}, Size of cache {cache_size_5}, Resolution {resolution_5}')

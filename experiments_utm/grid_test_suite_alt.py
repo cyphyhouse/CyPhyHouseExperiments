@@ -72,6 +72,23 @@ vint_list = [600, 750, 900, 1050]
 rho_list = [10000, 43736, 87472, ]
 h_list = [-2000, 0, 2000]
 
+# # theta_list = [-np.pi*3/4]
+# vint_list = [600, 900]
+# rho_list = [10000, 43736]
+# h_list = [0]
+
+# theta_list = [-np.pi*3/4]
+# # vint_list = [600, 900]
+# vint_list = [600]
+# rho_list = [float('nan'), 10000]
+# h_list = [0]
+
+# theta_list = [-np.pi*3/4]
+# # vint_list = [600, 900]
+# vint_list = [600]
+# rho_list = [float('nan'), 10000]
+# h_list = [0]
+
 scale = 0.3048 / 40
 T = 100
 T_wp = 150
@@ -116,7 +133,7 @@ for i, theta in enumerate(theta_list):
                 init_lin_vel_0 = [0, vown * scale, 0]
                 init_pos_1 = [xint * scale, yint * scale, init_pos_0[2] - h*scale]
                 init_yaw_1 = np.pi / 2 + phi
-                init_lin_vel_1 = [vint * np.cos(init_yaw_1) * scale, vint * np.sin(init_yaw_1) * scale, h*vint/rho*scale]
+                init_lin_vel_1 = [vint * np.cos(init_yaw_1) * scale, vint * np.sin(init_yaw_1) * scale, h/T*scale]
                 yaml_str_0 = string_init_0 + str(init_pos_0) + ', init_yaw: ' + str(init_yaw_0) + ', init_lin_vel: ' + str(init_lin_vel_0) + '}\n'
                 yaml_str_1 = string_init_1 + str(init_pos_1) + ', init_yaw: ' + str(init_yaw_1) + ', init_lin_vel: ' + str(init_lin_vel_1) + '}\n'
                 print(yaml_str_0)

@@ -119,7 +119,7 @@ def run_simulation(idx, scene, scene_info):
     time.sleep(120)
 
     p_manager = start_process(
-        ['python3.7', 'test_protocol.py', scene, scene_info, idx],
+        ['python3', 'test_protocol.py', scene, scene_info, idx],
         'MANAGER',
         start_time,
         idx

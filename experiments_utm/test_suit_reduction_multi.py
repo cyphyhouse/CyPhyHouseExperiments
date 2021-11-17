@@ -24,12 +24,14 @@ class Test:
         self.agent_list = agent_list
 
 class TestSuiteCache:
-    def __init__(self, resolution = [0.1,0.1,0.5,0.05,0.05,0.05,0.05,0.05,0.10,0.10,0.10,0.10]):
+    def __init__(self, resolution, fine_resolution):
         self.cache_dict = {}
         self.resolution = resolution
+        self.fine_resolution = fine_resolution
+        self.content_similarity = 0.01
 
-    def in_cache_2(self, state, desired_velocity, rotate_3d = True):
-        key = self.generate_key_2(state, desired_velocity, rotate_3d)
+    def in_cache_2(self, state, desired_velocity, rotate_3d = True, fine = False):
+        key = self.generate_key_2(state, desired_velocity, rotate_3d, fine)
                     
         if key in self.cache_dict:
             return True 
@@ -58,62 +60,65 @@ class TestSuiteCache:
 
         key = self.generate_key_2(state, desired_velocity, rotate_3d)
                     
-        new_state = copy.deepcopy(self.cache_dict[key])
+        new_state_list = copy.deepcopy(self.cache_dict[key])
 
-        vx = state[6]
-        vy = state[7]
-        vz = state[8]
-        if rotate_3d:
-            v_body = self.convert_pos_to_body([vx, vy, vz], roll, pitch, yaw)
-        else:
-            v_body = self.convert_pos_to_body([vx, vy, vz], 0, 0, yaw)
+        ret = []
+        for new_state in new_state_list:
+            vx = state[6]
+            vy = state[7]
+            vz = state[8]
+            if rotate_3d:
+                v_body = self.convert_pos_to_body([vx, vy, vz], roll, pitch, yaw)
+            else:
+                v_body = self.convert_pos_to_body([vx, vy, vz], 0, 0, yaw)
 
-        vdesire_x = state[18]
-        vdesire_y = state[19]
-        vdesire_z = state[20]
-        if rotate_3d:
-            vdesire_body = self.convert_pos_to_body([vdesire_x, vdesire_y, vdesire_z], roll, pitch, yaw)
-        else:
-            vdesire_body = self.convert_pos_to_body([vdesire_x, vdesire_y, vdesire_z], 0, 0, yaw)
+            vdesire_x = state[18]
+            vdesire_y = state[19]
+            vdesire_z = state[20]
+            if rotate_3d:
+                vdesire_body = self.convert_pos_to_body([vdesire_x, vdesire_y, vdesire_z], roll, pitch, yaw)
+            else:
+                vdesire_body = self.convert_pos_to_body([vdesire_x, vdesire_y, vdesire_z], 0, 0, yaw)
 
-        new_state[3] += state[3]
-        new_state[4] += state[4]
-        new_state[5] += state[5]
+            new_state[3] += state[3]
+            new_state[4] += state[4]
+            new_state[5] += state[5]
 
-        next_vx_body = new_state[6] + v_body[0]
-        next_vy_body = new_state[7] + v_body[1]
-        next_vz_body = new_state[8] + v_body[2]
+            next_vx_body = new_state[6] + v_body[0]
+            next_vy_body = new_state[7] + v_body[1]
+            next_vz_body = new_state[8] + v_body[2]
 
-        next_desire_vx_body = new_state[18] + v_body[0]
-        next_desire_vy_body = new_state[19] + v_body[1]
-        next_desire_vz_body = new_state[20] + v_body[2]
+            next_desire_vx_body = new_state[18] + v_body[0]
+            next_desire_vy_body = new_state[19] + v_body[1]
+            next_desire_vz_body = new_state[20] + v_body[2]
 
-        x_offset = new_state[0] + v_body[0]
-        y_offset = new_state[1] + v_body[1]
-        z_offset = new_state[2] + v_body[2]
+            x_offset = new_state[0] + v_body[0]
+            y_offset = new_state[1] + v_body[1]
+            z_offset = new_state[2] + v_body[2]
 
-        if rotate_3d:
-            offset = self.convert_body_to_pos([x_offset, y_offset, z_offset], roll, pitch, yaw)
-            next_v = self.convert_body_to_pos([next_vx_body, next_vy_body, next_vz_body], roll, pitch, yaw)
-            next_vdesire = self.convert_body_to_pos([next_desire_vx_body, next_desire_vy_body, next_desire_vz_body], roll, pitch, yaw)
-        else:
-            offset = self.convert_body_to_pos([x_offset, y_offset, z_offset], 0, 0, yaw)
-            next_v = self.convert_body_to_pos([next_vx_body, next_vy_body, next_vz_body], 0, 0, yaw)
-            next_vdesire = self.convert_body_to_pos([next_desire_vx_body, next_desire_vy_body, next_desire_vz_body], 0, 0, yaw)
+            if rotate_3d:
+                offset = self.convert_body_to_pos([x_offset, y_offset, z_offset], roll, pitch, yaw)
+                next_v = self.convert_body_to_pos([next_vx_body, next_vy_body, next_vz_body], roll, pitch, yaw)
+                next_vdesire = self.convert_body_to_pos([next_desire_vx_body, next_desire_vy_body, next_desire_vz_body], roll, pitch, yaw)
+            else:
+                offset = self.convert_body_to_pos([x_offset, y_offset, z_offset], 0, 0, yaw)
+                next_v = self.convert_body_to_pos([next_vx_body, next_vy_body, next_vz_body], 0, 0, yaw)
+                next_vdesire = self.convert_body_to_pos([next_desire_vx_body, next_desire_vy_body, next_desire_vz_body], 0, 0, yaw)
 
-        new_state[0] = state[0] + offset[0]
-        new_state[1] = state[1] + offset[1]
-        new_state[2] = state[2] + offset[2]
+            new_state[0] = state[0] + offset[0]
+            new_state[1] = state[1] + offset[1]
+            new_state[2] = state[2] + offset[2]
 
-        new_state[6] = next_v[0]
-        new_state[7] = next_v[1]
-        new_state[8] = next_v[2]
+            new_state[6] = next_v[0]
+            new_state[7] = next_v[1]
+            new_state[8] = next_v[2]
 
-        new_state[18] = next_vdesire[0] 
-        new_state[19] = next_vdesire[1] 
-        new_state[20] = next_vdesire[2] 
+            new_state[18] = next_vdesire[0] 
+            new_state[19] = next_vdesire[1] 
+            new_state[20] = next_vdesire[2] 
 
-        return new_state
+            ret.append(new_state)
+        return ret 
 
     def get_next_state(self, state, desired_velocity, rotate_3d = True):
         # body_state = self.body(state)
@@ -130,59 +135,63 @@ class TestSuiteCache:
 
         key = self.generate_key(state, desired_velocity, rotate_3d)
                     
-        new_state = copy.deepcopy(self.cache_dict[key])
+        new_state_list = copy.deepcopy(self.cache_dict[key])
 
-        vx = state[6]
-        vy = state[7]
-        vz = state[8]
-        if rotate_3d:
-            v_body = self.convert_pos_to_body([vx, vy, vz], roll, pitch, yaw)
-        else:
-            v_body = self.convert_pos_to_body([vx, vy, vz], 0, 0, yaw)
-            
-        vdesire_x = state[18]
-        vdesire_y = state[19]
-        vdesire_z = state[20]
-        # vdesire_body = self.convert_pos_to_body([vdesire_x, vdesire_y, vdesire_z], roll, pitch, yaw)
+        ret = []
+        for new_state in new_state_list:
+            vx = state[6]
+            vy = state[7]
+            vz = state[8]
+            if rotate_3d:
+                v_body = self.convert_pos_to_body([vx, vy, vz], roll, pitch, yaw)
+            else:
+                v_body = self.convert_pos_to_body([vx, vy, vz], 0, 0, yaw)
+                
+            vdesire_x = state[18]
+            vdesire_y = state[19]
+            vdesire_z = state[20]
+            # vdesire_body = self.convert_pos_to_body([vdesire_x, vdesire_y, vdesire_z], roll, pitch, yaw)
 
-        new_state[3] += state[3]
-        new_state[4] += state[4]
-        new_state[5] += state[5]
+            new_state[3] += state[3]
+            new_state[4] += state[4]
+            new_state[5] += state[5]
 
-        next_vx_body = new_state[6]
-        next_vy_body = new_state[7]
-        next_vz_body = new_state[8]
+            next_vx_body = new_state[6]
+            next_vy_body = new_state[7]
+            next_vz_body = new_state[8]
 
-        next_desire_vx_body = new_state[18]
-        next_desire_vy_body = new_state[19]
-        next_desire_vz_body = new_state[20]
+            next_desire_vx_body = new_state[18]
+            next_desire_vy_body = new_state[19]
+            next_desire_vz_body = new_state[20]
 
-        x_offset_body = new_state[0]
-        y_offset_body = new_state[1]
-        z_offset_body = new_state[2]
+            x_offset_body = new_state[0]
+            y_offset_body = new_state[1]
+            z_offset_body = new_state[2]
 
-        if rotate_3d:
-            offset = self.convert_body_to_pos([x_offset_body, y_offset_body, z_offset_body], roll, pitch, yaw)
-            next_v = self.convert_body_to_pos([next_vx_body, next_vy_body, next_vz_body], roll, pitch, yaw)
-            next_vdesire = self.convert_body_to_pos([next_desire_vx_body, next_desire_vy_body, next_desire_vz_body], roll, pitch, yaw)
-        else:
-            offset = self.convert_body_to_pos([x_offset_body, y_offset_body, z_offset_body], 0, 0, yaw)
-            next_v = self.convert_body_to_pos([next_vx_body, next_vy_body, next_vz_body], 0, 0, yaw)
-            next_vdesire = self.convert_body_to_pos([next_desire_vx_body, next_desire_vy_body, next_desire_vz_body], 0, 0, yaw)
+            if rotate_3d:
+                offset = self.convert_body_to_pos([x_offset_body, y_offset_body, z_offset_body], roll, pitch, yaw)
+                next_v = self.convert_body_to_pos([next_vx_body, next_vy_body, next_vz_body], roll, pitch, yaw)
+                next_vdesire = self.convert_body_to_pos([next_desire_vx_body, next_desire_vy_body, next_desire_vz_body], roll, pitch, yaw)
+            else:
+                offset = self.convert_body_to_pos([x_offset_body, y_offset_body, z_offset_body], 0, 0, yaw)
+                next_v = self.convert_body_to_pos([next_vx_body, next_vy_body, next_vz_body], 0, 0, yaw)
+                next_vdesire = self.convert_body_to_pos([next_desire_vx_body, next_desire_vy_body, next_desire_vz_body], 0, 0, yaw)
 
-        new_state[0] = state[0] + offset[0]
-        new_state[1] = state[1] + offset[1]
-        new_state[2] = state[2] + offset[2]
+            new_state[0] = state[0] + offset[0]
+            new_state[1] = state[1] + offset[1]
+            new_state[2] = state[2] + offset[2]
 
-        new_state[6] = next_v[0]
-        new_state[7] = next_v[1]
-        new_state[8] = next_v[2]
+            new_state[6] = next_v[0]
+            new_state[7] = next_v[1]
+            new_state[8] = next_v[2]
 
-        new_state[18] = next_vdesire[0] 
-        new_state[19] = next_vdesire[1] 
-        new_state[20] = next_vdesire[2] 
+            new_state[18] = next_vdesire[0] 
+            new_state[19] = next_vdesire[1] 
+            new_state[20] = next_vdesire[2] 
 
-        return new_state
+            # return new_state
+            ret.append(new_state)
+        return ret 
 
     # def get_next_state(self, state, ra):
     #     # body_state = self.body(state)
@@ -247,70 +256,88 @@ class TestSuiteCache:
 
     #     return new_state
 
+    # def check_fine_resolution_2(state, desired_velocity, rotate_3d):
+    #     key = self.generate_key_2(state, desired_velocity, rotate_3d)
+    #     next_state = 
+
     def add_test_run_2(self, trajectories, rotate_3d = True):
         for i, time_step in enumerate(trajectories):
             for k, point in enumerate(time_step):
                 desired_velocity = point[18:21]
                 state = point[:-1]
                 ra = point[-1]
-                if not self.in_cache_2(state, desired_velocity, rotate_3d):
-                    key = self.generate_key_2(state, desired_velocity, rotate_3d)
-                    if i+1 < len(trajectories):
-                        next_state = copy.deepcopy(trajectories[i+1][k])
-                        x_offset = (next_state[0] - state[0] - state[6]) 
-                        y_offset = (next_state[1] - state[1] - state[7]) 
-                        z_offset = (next_state[2] - state[2] - state[8]) 
+                key = self.generate_key_2(state, desired_velocity, rotate_3d)
+                if i+1 < len(trajectories):
+                    # if self.check_fine_resolution_2(state, desired_velocity, rotate_3d):
+                    #     continue
+                    if not self.in_cache_2(state, desired_velocity, rotate_3d):
+                        self.cache_dict[key] = []
+                    next_state = copy.deepcopy(trajectories[i+1][k])
+                    x_offset = (next_state[0] - state[0] - state[6]) 
+                    y_offset = (next_state[1] - state[1] - state[7]) 
+                    z_offset = (next_state[2] - state[2] - state[8]) 
 
-                        roll = state[3]
-                        pitch = state[4]
-                        yaw = state[5]
+                    roll = state[3]
+                    pitch = state[4]
+                    yaw = state[5]
 
-                        if rotate_3d:
-                            offset_body = self.convert_pos_to_body([x_offset, y_offset, z_offset], roll, pitch, yaw)    
-                        else:
-                            offset_body = self.convert_pos_to_body([x_offset, y_offset, z_offset], 0, 0, yaw)
+                    if rotate_3d:
+                        offset_body = self.convert_pos_to_body([x_offset, y_offset, z_offset], roll, pitch, yaw)    
+                    else:
+                        offset_body = self.convert_pos_to_body([x_offset, y_offset, z_offset], 0, 0, yaw)
 
-                        vx = state[6]
-                        vy = state[7]
-                        vz = state[8]
-                        if rotate_3d:
-                            v_body = self.convert_pos_to_body([vx, vy, vz], roll, pitch, yaw)
-                        else:
-                            v_body = self.convert_pos_to_body([vx, vy, vz], 0, 0, yaw)    
+                    vx = state[6]
+                    vy = state[7]
+                    vz = state[8]
+                    if rotate_3d:
+                        v_body = self.convert_pos_to_body([vx, vy, vz], roll, pitch, yaw)
+                    else:
+                        v_body = self.convert_pos_to_body([vx, vy, vz], 0, 0, yaw)    
 
-                        next_vx = next_state[6]
-                        next_vy = next_state[7]
-                        next_vz = next_state[8]
-                        if rotate_3d:
-                            nextv_body = self.convert_pos_to_body([next_vx, next_vy, next_vz], roll, pitch, yaw)
-                        else:
-                            nextv_body = self.convert_pos_to_body([next_vx, next_vy, next_vz], 0, 0, yaw)
-                            
-                        vdesirex = next_state[18]
-                        vdesirey = next_state[19]
-                        vdesirez = next_state[20]
-                        if rotate_3d:
-                            vdesire_body = self.convert_pos_to_body([vdesirex, vdesirey, vdesirez], roll, pitch, yaw)
-                        else:
-                            vdesire_body = self.convert_pos_to_body([vdesirex, vdesirey, vdesirez], 0, 0, yaw)
+                    next_vx = next_state[6]
+                    next_vy = next_state[7]
+                    next_vz = next_state[8]
+                    if rotate_3d:
+                        nextv_body = self.convert_pos_to_body([next_vx, next_vy, next_vz], roll, pitch, yaw)
+                    else:
+                        nextv_body = self.convert_pos_to_body([next_vx, next_vy, next_vz], 0, 0, yaw)
+                        
+                    vdesirex = next_state[18]
+                    vdesirey = next_state[19]
+                    vdesirez = next_state[20]
+                    if rotate_3d:
+                        vdesire_body = self.convert_pos_to_body([vdesirex, vdesirey, vdesirez], roll, pitch, yaw)
+                    else:
+                        vdesire_body = self.convert_pos_to_body([vdesirex, vdesirey, vdesirez], 0, 0, yaw)
 
-                        next_state[0] = offset_body[0]
-                        next_state[1] = offset_body[1]
-                        next_state[2] = offset_body[2]
+                    next_state[0] = offset_body[0]
+                    next_state[1] = offset_body[1]
+                    next_state[2] = offset_body[2]
 
-                        next_state[3] -= roll 
-                        next_state[4] -= pitch 
-                        next_state[5] -= yaw
+                    next_state[3] -= roll 
+                    next_state[4] -= pitch 
+                    next_state[5] -= yaw
 
-                        next_state[6] = nextv_body[0] - v_body[0]
-                        next_state[7] = nextv_body[1] - v_body[1]
-                        next_state[8] = nextv_body[2] - v_body[2]
+                    next_state[6] = nextv_body[0] - v_body[0]
+                    next_state[7] = nextv_body[1] - v_body[1]
+                    next_state[8] = nextv_body[2] - v_body[2]
 
-                        next_state[18] = vdesire_body[0] - v_body[0]
-                        next_state[19] = vdesire_body[1] - v_body[1]
-                        next_state[20] = vdesire_body[2] - v_body[2]
+                    next_state[18] = vdesire_body[0] - v_body[0]
+                    next_state[19] = vdesire_body[1] - v_body[1]
+                    next_state[20] = vdesire_body[2] - v_body[2]
 
-                        self.cache_dict[key] = next_state
+                    # self.cache_dict[key] = next_state
+                    if not self.check_content_similarity(key, next_state):
+                        self.cache_dict[key].append(next_state)
+
+    def check_content_similarity(self, key, new_state):
+        similar = False
+        new_state_list = self.cache_dict[key]
+        for tmp in new_state_list:
+            state_diff = np.linalg.norm(np.array(new_state[:21]) - np.array(tmp[:21]))
+            if state_diff < self.content_similarity:
+                return True
+        return False
 
     def add_test_run(self, trajectories, rotate_3d = True):
         for i, time_step in enumerate(trajectories):
@@ -318,65 +345,66 @@ class TestSuiteCache:
                 desired_velocity = point[18:21]
                 state = point[:-1]
                 ra = point[-1]
+                key = self.generate_key(state, desired_velocity, rotate_3d)
                 if not self.in_cache(state, desired_velocity, rotate_3d):
-                    key = self.generate_key(state, desired_velocity, rotate_3d)
-                    if i+1 < len(trajectories):
-                        next_state = copy.deepcopy(trajectories[i+1][k])
-                        x_offset = (next_state[0] - state[0]) 
-                        y_offset = (next_state[1] - state[1]) 
-                        z_offset = (next_state[2] - state[2]) 
+                    self.cache_dict[key] = []
+                if i+1 < len(trajectories):
+                    next_state = copy.deepcopy(trajectories[i+1][k])
+                    x_offset = (next_state[0] - state[0]) 
+                    y_offset = (next_state[1] - state[1]) 
+                    z_offset = (next_state[2] - state[2]) 
 
-                        roll = state[3]
-                        pitch = state[4]
-                        yaw = state[5]
+                    roll = state[3]
+                    pitch = state[4]
+                    yaw = state[5]
 
-                        if rotate_3d:
-                            offset_body = self.convert_pos_to_body([x_offset, y_offset, z_offset], roll, pitch, yaw)     
-                        else:
-                            offset_body = self.convert_pos_to_body([x_offset, y_offset, z_offset], 0, 0, yaw)     
-                            
-                        vx = state[6]
-                        vy = state[7]
-                        vz = state[8]
-                        if rotate_3d:
-                            v_body = self.convert_pos_to_body([vx, vy, vz], roll, pitch, yaw)
-                        else:
-                            v_body = self.convert_pos_to_body([vx, vy, vz], 0, 0, yaw)
-                            
-                        next_vx = next_state[6]
-                        next_vy = next_state[7]
-                        next_vz = next_state[8]
-                        if rotate_3d:
-                            nextv_body = self.convert_pos_to_body([next_vx, next_vy, next_vz], roll, pitch, yaw)
-                        else:
-                            nextv_body = self.convert_pos_to_body([next_vx, next_vy, next_vz], 0, 0, yaw)
-                            
-                        vdesirex = next_state[18]
-                        vdesirey = next_state[19]
-                        vdesirez = next_state[20]
+                    if rotate_3d:
+                        offset_body = self.convert_pos_to_body([x_offset, y_offset, z_offset], roll, pitch, yaw)     
+                    else:
+                        offset_body = self.convert_pos_to_body([x_offset, y_offset, z_offset], 0, 0, yaw)     
+                        
+                    vx = state[6]
+                    vy = state[7]
+                    vz = state[8]
+                    if rotate_3d:
+                        v_body = self.convert_pos_to_body([vx, vy, vz], roll, pitch, yaw)
+                    else:
+                        v_body = self.convert_pos_to_body([vx, vy, vz], 0, 0, yaw)
+                        
+                    next_vx = next_state[6]
+                    next_vy = next_state[7]
+                    next_vz = next_state[8]
+                    if rotate_3d:
+                        nextv_body = self.convert_pos_to_body([next_vx, next_vy, next_vz], roll, pitch, yaw)
+                    else:
+                        nextv_body = self.convert_pos_to_body([next_vx, next_vy, next_vz], 0, 0, yaw)
+                        
+                    vdesirex = next_state[18]
+                    vdesirey = next_state[19]
+                    vdesirez = next_state[20]
 
-                        if rotate_3d:
-                            vdesire_body = self.convert_pos_to_body([vdesirex, vdesirey, vdesirez], roll, pitch, yaw)
-                        else:
-                            vdesire_body = self.convert_pos_to_body([vdesirex, vdesirey, vdesirez], 0, 0, yaw)
+                    if rotate_3d:
+                        vdesire_body = self.convert_pos_to_body([vdesirex, vdesirey, vdesirez], roll, pitch, yaw)
+                    else:
+                        vdesire_body = self.convert_pos_to_body([vdesirex, vdesirey, vdesirez], 0, 0, yaw)
 
-                        next_state[0] = offset_body[0]
-                        next_state[1] = offset_body[1]
-                        next_state[2] = offset_body[2]
+                    next_state[0] = offset_body[0]
+                    next_state[1] = offset_body[1]
+                    next_state[2] = offset_body[2]
 
-                        next_state[3] -= roll 
-                        next_state[4] -= pitch 
-                        next_state[5] -= yaw
+                    next_state[3] -= roll 
+                    next_state[4] -= pitch 
+                    next_state[5] -= yaw
 
-                        next_state[6] = nextv_body[0]
-                        next_state[7] = nextv_body[1]
-                        next_state[8] = nextv_body[2]
+                    next_state[6] = nextv_body[0]
+                    next_state[7] = nextv_body[1]
+                    next_state[8] = nextv_body[2]
 
-                        next_state[18] = vdesire_body[0]
-                        next_state[19] = vdesire_body[1]
-                        next_state[20] = vdesire_body[2]
+                    next_state[18] = vdesire_body[0]
+                    next_state[19] = vdesire_body[1]
+                    next_state[20] = vdesire_body[2]
 
-                        self.cache_dict[key] = next_state
+                    self.cache_dict[key] = next_state
 
     # def add_test_run(self, trajectories):
     #     for i, time_step in enumerate(trajectories):
@@ -458,40 +486,30 @@ class TestSuiteCache:
         pos_body = list(pos_body)
         return pos_body
 
-    def generate_key_2(self, state, desired_velocity, rotate_3d = True):
+    def generate_key_2(self, state, desired_velocity, rotate_3d = True, fine = False):
         roll = state[3]
         pitch = state[4]
         yaw = state[5]
-        roll_round = self.__round(roll, 0.1)
-        pitch_round = self.__round(pitch, 0.1)
-        yaw_round = self.__round(yaw, 0.1)
-        # roll_round = roll
-        # pitch_round = pitch
-        # yaw_round = yaw
 
         vx = state[6]
         vy = state[7]
         vz = state[8]
         if rotate_3d:
-            vbody = self.convert_pos_to_body([vx, vy, vz], roll_round, pitch_round, yaw_round)
+            vbody = self.convert_pos_to_body([vx, vy, vz], roll, pitch, yaw)
         else:
-            vbody = self.convert_pos_to_body([vx, vy, vz], 0, 0, yaw_round)
+            vbody = self.convert_pos_to_body([vx, vy, vz], 0, 0, yaw)
             
         vdesired_x = desired_velocity[0]
         vdesired_y = desired_velocity[1]
         vdesired_z = desired_velocity[2]
         if rotate_3d:
-            vdesired_body = self.convert_pos_to_body([vdesired_x, vdesired_y, vdesired_z], roll_round, pitch_round, yaw_round)
+            vdesired_body = self.convert_pos_to_body([vdesired_x, vdesired_y, vdesired_z], roll, pitch, yaw)
         else:
-            vdesired_body = self.convert_pos_to_body([vdesired_x, vdesired_y, vdesired_z], 0, 0, yaw_round)
+            vdesired_body = self.convert_pos_to_body([vdesired_x, vdesired_y, vdesired_z], 0, 0, yaw)
 
         vdesired_body_offset = [vdesired_body[0] - vbody[0], vdesired_body[1] - vbody[1], vdesired_body[2] - vbody[2]]
         # key_state = [roll, pitch] + vdesired_body_offset
-        # key_state = vdesired_body_offset        
-        if rotate_3d:
-            key_state = vdesired_body_offset
-        else:
-            key_state = [roll, pitch] + vdesired_body_offset
+        key_state = vdesired_body_offset
         state_round = []
         for j, val in enumerate(key_state):
             state_round.append(self.__round(val, self.resolution[j]))
@@ -503,18 +521,15 @@ class TestSuiteCache:
         roll = state[3]
         pitch = state[4]
         yaw = state[5]
-        roll_round = self.__round(roll, 0.1)
-        pitch_round = self.__round(pitch, 0.1)
-        yaw_round = self.__round(yaw, 0.1)
 
         vx = state[6]
         vy = state[7]
         vz = state[8]
         
         if rotate_3d:
-            vbody = self.convert_pos_to_body([vx, vy, vz], roll_round, pitch_round, yaw_round)
+            vbody = self.convert_pos_to_body([vx, vy, vz], roll, pitch, yaw)
         else:
-            vbody = self.convert_pos_to_body([vx, vy, vz], 0, 0, yaw_round)
+            vbody = self.convert_pos_to_body([vx, vy, vz], 0, 0, yaw)
 
         res = vbody
 
@@ -523,9 +538,9 @@ class TestSuiteCache:
         vdesired_z = desired_velocity[2]
 
         if rotate_3d:
-            vdesired_body = self.convert_pos_to_body([vdesired_x, vdesired_y, vdesired_z], roll_round, pitch_round, yaw_round)
+            vdesired_body = self.convert_pos_to_body([vdesired_x, vdesired_y, vdesired_z], roll, pitch, yaw)
         else:
-            vdesired_body = self.convert_pos_to_body([vdesired_x, vdesired_y, vdesired_z], 0, 0, yaw_round)
+            vdesired_body = self.convert_pos_to_body([vdesired_x, vdesired_y, vdesired_z], 0, 0, yaw)
         
         if rotate_3d:
             key_state = res + vdesired_body
@@ -736,7 +751,7 @@ def generate_test_suite(
                     waypoints_dict['drone1'].append((init_pos_1[0] + init_lin_vel_1[0] * (l+1) * T_wp, init_pos_1[1] + init_lin_vel_1[1] * (l+1) * T_wp, 40))
                 waypoints_dict['drone1'].append((init_pos_1[0] + init_lin_vel_1[0] * (n+1) * T_wp, init_pos_1[1] + init_lin_vel_1[1] * (n+1) * T_wp, 40))
                 waypoints_list = [waypoints_dict['drone0'], waypoints_dict['drone1']]
-                test_case = Test(init=init, wp=waypoints_list, T=T_wp, idx=f"{i}_{j}_{k}", agent_list = ['drone0', 'drone1'])
+                test_case = Test(init=init, wp=waypoints_list, T=T_wp, idx=f"{0}_{1}_{0}", agent_list = ['drone0', 'drone1'])
 
                 test_suite.append(test_case)
     return test_suite
@@ -801,18 +816,39 @@ def plot_trajectory(cache_trajectory, simulate_trajectory, idx = '', test_case =
     not_in_cache = []
     for time_step in cache_trajectory:
         # for i, point in enumerate(time_step):
-        x_cache_0.append(time_step[0][0])
-        y_cache_0.append(time_step[0][1])
-        x_cache_1.append(time_step[1][0])
-        y_cache_1.append(time_step[1][1])
-        z_cache_0.append(time_step[0][2])
-        z_cache_1.append(time_step[1][2])
-        roll_cache_0.append(time_step[0][3])
-        pitch_cache_0.append(time_step[1][3])
-        yaw_cache_0.append(time_step[0][4])
-        roll_cache_1.append(time_step[1][4])
-        pitch_cache_1.append(time_step[0][5])
-        yaw_cache_1.append(time_step[1][5])
+        tmp_x = []
+        tmp_y = []
+        tmp_z = []
+        for i, test_point in enumerate(time_step[0]):
+            tmp_x.append(test_point[0])
+            tmp_y.append(test_point[1])
+            tmp_z.append(test_point[2])
+        x_cache_0.append(tmp_x)
+        y_cache_0.append(tmp_y)
+        z_cache_0.append(tmp_z)
+        # x_cache_0.append(time_step[0][0])
+        # y_cache_0.append(time_step[0][1])
+        # z_cache_0.append(time_step[0][2])
+        tmp_x = []
+        tmp_y = []
+        tmp_z = []
+        for i, test_point in enumerate(time_step[1]):
+            tmp_x.append(test_point[0])
+            tmp_y.append(test_point[1])
+            tmp_z.append(test_point[2])
+        x_cache_1.append(tmp_x)
+        y_cache_1.append(tmp_y)
+        z_cache_1.append(tmp_z)
+        # x_cache_1.append(time_step[1][0])
+        # y_cache_1.append(time_step[1][1])
+        # z_cache_1.append(time_step[1][2])
+        
+        # roll_cache_0.append(time_step[0][3])
+        # pitch_cache_0.append(time_step[1][3])
+        # yaw_cache_0.append(time_step[0][4])
+        # roll_cache_1.append(time_step[1][4])
+        # pitch_cache_1.append(time_step[0][5])
+        # yaw_cache_1.append(time_step[1][5])
 
     
         not_in_cache.append(time_step[2])
@@ -845,23 +881,25 @@ def plot_trajectory(cache_trajectory, simulate_trajectory, idx = '', test_case =
         yaw_simulate_1.append(time_step[1][5])
 
     plt.figure(0)
-    plt.plot(x_cache_0, y_cache_0, 'g')
-    plt.plot(x_cache_1, y_cache_1, 'g')
+    # plt.plot(x_cache_0, y_cache_0, 'g')
+    # plt.plot(x_cache_1, y_cache_1, 'g')
     cache_hit_0 = []
     cache_hit_1 = []
     cache_miss_0 = []
     cache_miss_1 = []
     for i in range(len(not_in_cache)):
         if not_in_cache[i] == 1:
-            plt.plot(x_cache_0[i], y_cache_0[i], 'r.')
-            plt.plot(x_cache_1[i], y_cache_1[i], 'r.')
-            cache_miss_0.append(z_cache_0[i])
-            cache_miss_1.append(z_cache_1[i])
+            plt.plot(x_simulate_0[i], y_simulate_0[i], 'r.')
+            plt.plot(x_simulate_1[i], y_simulate_1[i], 'r.')
+            cache_miss_0.append(z_simulate_0[i])
+            cache_miss_1.append(z_simulate_1[i])
             cache_hit_0.append(float('nan'))
             cache_hit_1.append(float('nan'))
         else:
-            plt.plot(x_cache_0[i], y_cache_0[i], 'g.')
-            plt.plot(x_cache_1[i], y_cache_1[i], 'g.')
+            for j in range(len(x_cache_0[i])):
+                plt.plot(x_cache_0[i][j], y_cache_0[i][j], 'g.')
+            for j in range(len(x_cache_1[i])):
+                plt.plot(x_cache_1[i][j], y_cache_1[i][j], 'g.')
             cache_hit_0.append(z_cache_0[i])
             cache_hit_1.append(z_cache_1[i])
             cache_miss_0.append(float('nan'))
@@ -869,20 +907,21 @@ def plot_trajectory(cache_trajectory, simulate_trajectory, idx = '', test_case =
 
     plt.plot(x_simulate_0, y_simulate_0, 'b')
     plt.plot(x_simulate_1, y_simulate_1, 'b')
-    fn = f'./plots/{test_case}_{idx}.png'
+    fn = f'./figures/{test_case}_{idx}.png'
     plt.savefig(fn)
-    plt.clf()
+    # plt.clf()
+    plt.show()
 
-    plt.figure(1)
-    plt.plot(z_cache_0, 'g')
-    plt.plot(z_simulate_0, 'b')
-    plt.plot(z_cache_1, 'g')
-    plt.plot(z_simulate_1, 'b')
+    # plt.figure(1)
+    # plt.plot(z_cache_0, 'g')
+    # plt.plot(z_simulate_0, 'b')
+    # plt.plot(z_cache_1, 'g')
+    # plt.plot(z_simulate_1, 'b')
 
-    plt.plot(cache_hit_0, 'g.')
-    plt.plot(cache_hit_1, 'g.')
-    plt.plot(cache_miss_0, 'r.')
-    plt.plot(cache_miss_1, 'r.')
+    # plt.plot(cache_hit_0, 'g.')
+    # plt.plot(cache_hit_1, 'g.')
+    # plt.plot(cache_miss_0, 'r.')
+    # plt.plot(cache_miss_1, 'r.')
     
     # plt.figure(2)
     # plt.plot(roll_cache_0, 'g')
@@ -912,12 +951,12 @@ def plot_trajectory(cache_trajectory, simulate_trajectory, idx = '', test_case =
     # plt.plot(yaw_cache_1, 'g')
     # plt.plot(yaw_simulate_1, 'b')
     
-    # plt.show()
-    fn = f'./plots/{test_case}_z_{idx}.png'
-    plt.savefig(fn)
+    # # plt.show()
+    # fn = f'./plots/{test_case}_z_{idx}.png'
+    # plt.savefig(fn)
     
-    # plt.show()
-    plt.clf()
+    # # plt.show()
+    # plt.clf()
 
 p_error_last = 0
 i_error = 0
@@ -1186,8 +1225,8 @@ def test_suite_reduction_2(TS: List[Test], rotate_3d = True, resolution = [0.1,0
         
     return cache_hit, total_points, cache
 
-def test_suite_reduction_3(TS: List[Test], resolution = [0.1,0.1,0.1], trajectory_dict = {}, test_case = 0, rotate_3d = True):
-    cache = TestSuiteCache(resolution = resolution)
+def test_suite_reduction_3(TS: List[Test], resolution = [0.1,0.1,0.1], fine_resolution = [0,0,0], trajectory_dict = {}, test_case = 0, rotate_3d = True):
+    cache = TestSuiteCache(resolution = resolution, fine_resolution = fine_resolution)
     execs = []
     cache_hit = 0
     total_points = 0
@@ -1210,28 +1249,40 @@ def test_suite_reduction_3(TS: List[Test], resolution = [0.1,0.1,0.1], trajector
         # if k == 3:
         #     print("stop here")
         
-        alpha = parsed_trajectory[0]
-        # print(f"processed trajectories {processed_trajectories}, test {test.idx}, total points {total_points}, cache size {cache_size}, hit {cache_hit}")
+        alpha = [[parsed_trajectory[0][0]],[parsed_trajectory[0][1]]]
+        print(f"processed trajectories {processed_trajectories}, test {test.idx}, total points {total_points}, cache size {cache_size}, hit {cache_hit}")
         num_agent = test.num_agents
         for i in range(len(parsed_trajectory)-1):
             next_alpha = []
             not_in_cache = False
-            # if i > 50:
-            #     print('stop here')
-            for j, agent_state in enumerate(alpha):
-                ra = parsed_trajectory[i][j][-1]
-                desired_velocity = agent_planner(agent_state, ra, test.waypoints[j][0])
-                if cache.in_cache_2(agent_state, desired_velocity, rotate_3d):
-                    next_state = cache.get_next_state_2(agent_state, desired_velocity, rotate_3d)
-                    trajectory_hit += 1
-                    next_alpha.append(next_state)
-                else:
-                    not_in_cache = True
-                    next_alpha = parsed_trajectory[i+1]
-                    cache.add_test_run_2([parsed_trajectory[i], parsed_trajectory[i+1]], rotate_3d)
+            if i == 3:
+                print('stop here')
+            for j, agent in enumerate(alpha):
+                in_cache = False
+                potential_next_state = []
+                for agent_state in agent:
+                    ra = parsed_trajectory[i][j][-1]
+                    desired_velocity = agent_planner(agent_state, ra, test.waypoints[j][0])
+                    if cache.in_cache_2(agent_state, desired_velocity, rotate_3d):
+                        next_state = cache.get_next_state_2(agent_state, desired_velocity, rotate_3d)
+                        trajectory_hit += 1
+                        # next_alpha.append(next_state)
+                        potential_next_state += next_state
+                    else:
+                        not_in_cache = True
                     
-                if not_in_cache:
-                    break 
+                    if not_in_cache:
+                        break 
+                    # Detect one potential next state in cache 
+                    in_cache = True
+
+                not_in_cache = False
+                if not in_cache:
+                    next_alpha = [[parsed_trajectory[i+1][0]], [parsed_trajectory[i+1][1]]]
+                    cache.add_test_run_2([parsed_trajectory[i], parsed_trajectory[i+1]], rotate_3d)
+                    not_in_cache = True
+                    break
+                next_alpha.append(potential_next_state)
 
             if not not_in_cache:
                 cache_hit += 2
@@ -1327,8 +1378,8 @@ def plot_acas_input_coverage(trajectory_dict):
     
     fn = f'./plots/acas_inpu_coverage.png'
     plt.savefig(fn)
-    # plt.show()
-    plt.clf()
+    plt.show()
+    # plt.clf()
 
 def plot_cache_content(cache: TestSuiteCache, test_case = 0):
     for key in cache.cache_dict:
@@ -1345,14 +1396,17 @@ if __name__ == "__main__":
     # vint_list = [60, 150, 300, 450, 600, 750, 900, 1050, 1145]
     # rho_list = [10000, 43736, 87472, 120000]
 
-    theta_list = [-np.pi*3/4, -np.pi/2, -np.pi*3/8, -np.pi/4, 0, np.pi/4, np.pi/3, np.pi*3/4, np.pi]
+    # theta_list = [-np.pi*3/4, -np.pi/2, -np.pi*3/8, -np.pi/4, 0, np.pi/4, np.pi/3, np.pi*3/4, np.pi]
     # # theta_list = [-np.pi*3/4, -np.pi/2, -np.pi*3/8, -np.pi/4, 0, np.pi/4, ]
+    theta_list = [-np.pi*3/4]
     
     # # vint_list = [900]
-    vint_list = [600, 750, 900, 1050]
+    # vint_list = [600, 750, 900, 1050]
+    vint_list = [750]
 
     # # rho_list = [43736]
-    rho_list = [10000, 43736, 87472, ]
+    # rho_list = [10000, 43736, 87472, ]
+    rho_list = [10000, 10000]
     
     # theta_list = [-np.pi*3/4]
     # vint_list = [600,900]
@@ -1362,82 +1416,82 @@ if __name__ == "__main__":
 
     trajectory_dict = {}
 
-    for k,test in enumerate(TS):
-        parsed_trajectory = load_parse_trajectory(test)
-        if parsed_trajectory is not None:
-            trajectory_dict[test.idx] = parsed_trajectory
-        print(f"processed trajectories {k}, test {test.idx}")
+    # for k,test in enumerate(TS):
+    #     parsed_trajectory = load_parse_trajectory(test)
+    #     if parsed_trajectory is not None:
+    #         trajectory_dict[test.idx] = parsed_trajectory
+    #     print(f"processed trajectories {k}, test {test.idx}")
 
-    plot_acas_input_coverage(trajectory_dict)
+    # plot_acas_input_coverage(trajectory_dict)
 
-    # # # Per point simulation with 2d rotation
-    cache_hit, total_points, cache = test_suite_reduction(TS, rotate_3d=False, resolution = [0.1,0.1,0.1,0.1,0.5,0.1,0.1,0.5], trajectory_dict = trajectory_dict, test_case = 0)
-    cache_size = len(cache.cache_dict)
-    resolution = cache.resolution
-    plot_cache_cell_coverage(cache, 0)
-    plot_cache_content(cache, 0)
-    print('Per point simulation with 2d rotation')
-    print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
+    # # # # Per point simulation with 2d rotation
+    # cache_hit, total_points, cache = test_suite_reduction(TS, rotate_3d=False, resolution = [0.1,0.1,0.1,0.1,0.5,0.1,0.1,0.5], trajectory_dict = trajectory_dict, test_case = 0)
+    # cache_size = len(cache.cache_dict)
+    # resolution = cache.resolution
+    # plot_cache_cell_coverage(cache, 0)
+    # plot_cache_content(cache, 0)
+    # print('Per point simulation with 2d rotation')
+    # print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
 
-    # # # Long simulation with 2d rotation
-    cache_hit, total_points, cache = test_suite_reduction_2(TS, rotate_3d=False, resolution = [0.1,0.1,0.1,0.1,0.5,0.1,0.1,0.5], trajectory_dict = trajectory_dict, test_case = 1)
-    cache_size = len(cache.cache_dict)
-    resolution = cache.resolution
-    plot_cache_cell_coverage(cache, 1)
-    plot_cache_content(cache, 1)
-    print('Long simulation with 2d rotation')
-    print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
+    # # # # Long simulation with 2d rotation
+    # cache_hit, total_points, cache = test_suite_reduction_2(TS, rotate_3d=False, resolution = [0.1,0.1,0.1,0.1,0.5,0.1,0.1,0.5], trajectory_dict = trajectory_dict, test_case = 1)
+    # cache_size = len(cache.cache_dict)
+    # resolution = cache.resolution
+    # plot_cache_cell_coverage(cache, 1)
+    # plot_cache_content(cache, 1)
+    # print('Long simulation with 2d rotation')
+    # print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
 
-    # # Per point with 2d rotation and velocity translation
-    cache_hit, total_points, cache = test_suite_reduction_3(TS, resolution = [0.1,0.1,0.1,0.1,0.05], trajectory_dict = trajectory_dict, test_case = 6, rotate_3d = False)
-    cache_size = len(cache.cache_dict)
-    resolution = cache.resolution
-    plot_cache_cell_coverage(cache, 6)
-    plot_cache_content(cache, 6)
-    print('Per point with 2d rotation and velocity translation')
-    print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
+    # # # Per point with 2d rotation and velocity translation
+    # cache_hit, total_points, cache = test_suite_reduction_3(TS, resolution = [0.1,0.1,0.05], trajectory_dict = trajectory_dict, test_case = 6, rotate_3d = False)
+    # cache_size = len(cache.cache_dict)
+    # resolution = cache.resolution
+    # plot_cache_cell_coverage(cache, 6)
+    # plot_cache_content(cache, 6)
+    # print('Per point with 2d rotation and velocity translation')
+    # print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
 
-    # # Long simulation with 2d rotation and velocity translation
-    cache_hit, total_points, cache = test_suite_reduction_4(TS, resolution = [0.1,0.1,0.1,0.1,0.5], trajectory_dict = trajectory_dict, test_case = 7, rotate_3d = False)
-    cache_size = len(cache.cache_dict)
-    resolution = cache.resolution
-    plot_cache_cell_coverage(cache, 7)
-    plot_cache_content(cache, 7)
-    print('Long simulation with 2d rotation and velocity translation')
-    print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
+    # # # Long simulation with 2d rotation and velocity translation
+    # cache_hit, total_points, cache = test_suite_reduction_4(TS, resolution = [0.1,0.1,0.5], trajectory_dict = trajectory_dict, test_case = 7, rotate_3d = False)
+    # cache_size = len(cache.cache_dict)
+    # resolution = cache.resolution
+    # plot_cache_cell_coverage(cache, 7)
+    # plot_cache_content(cache, 7)
+    # print('Long simulation with 2d rotation and velocity translation')
+    # print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
 
-    # # Per point simulation with 3d rotation
-    cache_hit, total_points, cache = test_suite_reduction(TS, rotate_3d=True, resolution = [0.1,0.1,0.5,0.1,0.1,0.5], trajectory_dict = trajectory_dict, test_case = 2)
-    cache_size = len(cache.cache_dict)
-    resolution = cache.resolution
-    plot_cache_cell_coverage(cache, 2)
-    plot_cache_content(cache, 2)
-    print('Per point simulation with 3d rotation')
-    print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
+    # # # Per point simulation with 3d rotation
+    # cache_hit, total_points, cache = test_suite_reduction(TS, rotate_3d=True, resolution = [0.1,0.1,0.5,0.1,0.1,0.5], trajectory_dict = trajectory_dict, test_case = 2)
+    # cache_size = len(cache.cache_dict)
+    # resolution = cache.resolution
+    # plot_cache_cell_coverage(cache, 2)
+    # plot_cache_content(cache, 2)
+    # print('Per point simulation with 3d rotation')
+    # print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
 
-    # # Long simulation with 3d rotation
-    cache_hit, total_points, cache = test_suite_reduction_2(TS, rotate_3d=True, resolution = [0.1,0.1,0.5,0.1,0.1,0.5], trajectory_dict = trajectory_dict, test_case = 3)
-    cache_size = len(cache.cache_dict)
-    resolution = cache.resolution
-    plot_cache_cell_coverage(cache, 3)
-    plot_cache_content(cache, 3)
-    print('Long simulation with 3d rotation')
-    print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
+    # # # Long simulation with 3d rotation
+    # cache_hit, total_points, cache = test_suite_reduction_2(TS, rotate_3d=True, resolution = [0.1,0.1,0.5,0.1,0.1,0.5], trajectory_dict = trajectory_dict, test_case = 3)
+    # cache_size = len(cache.cache_dict)
+    # resolution = cache.resolution
+    # plot_cache_cell_coverage(cache, 3)
+    # plot_cache_content(cache, 3)
+    # print('Long simulation with 3d rotation')
+    # print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
 
     # # Per point with 3d rotation and velocity translation
-    cache_hit, total_points, cache = test_suite_reduction_3(TS, resolution = [0.1,0.1,0.05], trajectory_dict = trajectory_dict, test_case = 4, rotate_3d = True)
+    cache_hit, total_points, cache = test_suite_reduction_3(TS, resolution = [0.1,0.1,0.1], fine_resolution = [1e-5, 1e-5, 5e-5], trajectory_dict = trajectory_dict, test_case = 4, rotate_3d = True)
     cache_size = len(cache.cache_dict)
     resolution = cache.resolution
-    plot_cache_cell_coverage(cache, 4)
-    plot_cache_content(cache, 4)
+    # plot_cache_cell_coverage(cache, 4)
+    # plot_cache_content(cache, 4)
     print('Per point with 3d rotation and velocity translation')
     print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
 
-    # # Long simulation with 3d rotation and velocity translation
-    cache_hit, total_points, cache = test_suite_reduction_4(TS, resolution = [0.1,0.1,0.5], trajectory_dict = trajectory_dict, test_case = 5, rotate_3d = True)
-    cache_size = len(cache.cache_dict)
-    resolution = cache.resolution
-    plot_cache_cell_coverage(cache, 5)
-    plot_cache_content(cache, 5)
-    print('Long simulation with 3d rotation and velocity translation')
-    print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
+    # # # Long simulation with 3d rotation and velocity translation
+    # cache_hit, total_points, cache = test_suite_reduction_4(TS, resolution = [0.1,0.1,0.5], trajectory_dict = trajectory_dict, test_case = 5, rotate_3d = True)
+    # cache_size = len(cache.cache_dict)
+    # resolution = cache.resolution
+    # plot_cache_cell_coverage(cache, 5)
+    # plot_cache_content(cache, 5)
+    # print('Long simulation with 3d rotation and velocity translation')
+    # print(f'Number of total points visited {total_points}, Number of cache hit {cache_hit}, Size of cache {cache_size}, Resolution {resolution}')
